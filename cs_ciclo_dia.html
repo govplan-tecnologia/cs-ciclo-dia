@@ -348,10 +348,9 @@ const ETAPAS = {
   4:{nome:'Frequência de uso',ciclo:30,itens:['Verificar se os usuários estão ativos e permanecem os mesmos da contratação','Abrir o relatório de custo','Verificar a frequência de uso dos módulos da plataforma','Entrar em contato com o lead (tabela de cadência)','Retomar contato com o cliente','Tirar dúvidas e orientar quanto a correções necessárias','Reforçar os canais de comunicação da plataforma','Colocar-se à disposição para sanar dificuldades','Informar próximo contato em 30 dias para verificação da satisfação','Registrar informações no GNP']},
   5:{nome:'Nível de satisfação',ciclo:30,itens:['Verificar se os usuários estão ativos e permanecem os mesmos da contratação','Abrir o relatório de custo','Verificar a utilização dos módulos da plataforma','Entrar em contato com o lead (tabela de cadência)','Retomar contato com o cliente','Tirar dúvidas e orientar quanto a correções necessárias','Reforçar os canais de comunicação da plataforma','Colocar-se à disposição para sanar dificuldades','Se satisfeito: solicitar atestado de capacidade técnica e disponibilizar link de depoimento','Registrar informações no GNP']},
   6:{nome:'Início de renovação',ciclo:15,itens:['Verificar a data fim do contrato no sistema','Levantar histórico de uso e satisfação do cliente','Preparar proposta de renovação personalizada','Entrar em contato com o gestor responsável','Apresentar proposta e condições de renovação','Registrar andamento no GNP']},
-  7:{nome:'Abre processo',ciclo:15,itens:['Confirmar aceite formal da renovação pelo cliente','Abrir processo de renovação no sistema interno','Enviar documentação necessária ao cliente','Acompanhar assinatura e retorno dos documentos','Confirmar dados cadastrais para renovação','Registrar no GNP']},
-  8:{nome:'Acomp. de empenho',ciclo:15,itens:['Verificar emissão de empenho pelo cliente','Confirmar valor e dados do empenho recebido','Encaminhar informações para o financeiro interno','Checar previsão de pagamento junto ao cliente','Registrar no GNP']},
+  7:{nome:'Acomp. de renovação',ciclo:15,itens:['Confirmar aceite formal da renovação pelo cliente','Abrir processo de renovação no sistema interno','Enviar documentação necessária ao cliente','Acompanhar assinatura e retorno dos documentos','Confirmar dados cadastrais para renovação','Registrar no GNP']},
+  8:{nome:'revisão de empenh',ciclo:15,itens:['Verificar emissão de empenho pelo cliente','Confirmar valor e dados do empenho recebido','Encaminhar informações para o financeiro interno','Checar previsão de pagamento junto ao cliente','Registrar no GNP']},
   9:{nome:'Previsão de empenho',ciclo:15,itens:['Confirmar previsão de empenho com o cliente','Verificar se há pendências documentais','Alinhar com financeiro sobre o prazo esperado','Registrar atualização no GNP']},
-  10:{nome:'Final de contrato',ciclo:15,itens:['Confirmar encerramento ou continuidade do contrato','Registrar resultado da renovação no GNP','Caso renovado: reiniciar ciclo de boas-vindas','Caso encerrado: registrar motivo e fazer pesquisa de churn','Arquivar documentação do ciclo encerrado']}
 };
 
 const AV_COR = e => 'av-'+Math.min(e,10);
@@ -387,7 +386,7 @@ async function carregarClientes() {
 
     CLIENTES = data.clientes.map(c => ({
       ...c,
-      etapa: c.etapaAtual || calcEtapa(calcDias(c.dataInicio)),
+      etapa: c.etapaAtual || calcEtapa(c.dataInicio, c.dataFim),
       checks: progressoLocal[c.id]?.checks || {},
       nok:    progressoLocal[c.id]?.nok    || [],
       concluida: false,
@@ -424,17 +423,29 @@ function salvarLocal() {
 
 // ─── LÓGICA ───────────────────────────────────────────────────────────────────
 function calcDias(d) { return d ? Math.floor((hoje - new Date(d))/(864e5)) : 0; }
-function calcEtapa(dias) {
-  if (dias < 0) return 1;
-  if (dias < 150) return Math.min(5, Math.floor(dias/30)+1);
-  return Math.min(10, Math.floor((dias-150)/15)+6);
+function calcEtapa(dataInicio, dataFim) {
+const hoje = new Date();
+const diasInicio = Math.floor((hoje - new Date(dataInicio)) / 86400000);
+const diasRestantes = Math.floor((new Date(dataFim) - hoje) / 86400000);
+// Últimos 120 dias = renovação
+if (diasRestantes <= 120) {
+if (diasRestantes <= 30) return 9;
+if (diasRestantes <= 60) return 8;
+if (diasRestantes <= 90) return 7;
+return 6;
 }
-function etapaEsperada(c) { return calcEtapa(calcDias(c.dataInicio)); }
+// Ciclo normal
+if (diasInicio < 30) return 1;
+if (diasInicio < 60) return 2;
+if (diasInicio < 90) return 3;
+if (diasInicio < 120) return 4;
+return 5;
+}
+function etapaEsperada(c) { return calcEtapa(c.dataInicio, c.dataFim)); }
 function estaAtrasado(c) { return !c.concluida && c.etapa < etapaEsperada(c); }
 function estaNoHoje(c) {
-  const dias = calcDias(c.dataInicio);
-  const ini = c.etapa <= 5 ? (c.etapa-1)*30 : 150+(c.etapa-6)*15;
-  return dias >= ini && dias <= ini+5;
+return c.etapa === etapaEsperada(c);
+}
 }
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
@@ -584,18 +595,24 @@ function abrirCrm(id) {
 }
 
 function concluirEtapa(id) {
-  const c=CLIENTES.find(x=>x.id===id);
-  const et=ETAPAS[c.etapa];
-  const total=et.itens.length;
-  const feitos=Object.values(c.checks).filter(Boolean).length;
-  if (feitos<total && !confirm(`Ainda há ${total-feitos} item(ns) não marcados.\nDeseja concluir mesmo assim?`)) return;
-
-  const novaEtapa = c.etapa<10 ? c.etapa+1 : c.etapa;
-  logAction(c,'CONCLUIU',`Etapa ${c.etapa}: ${et.nome}`, novaEtapa);
-
-  if (c.etapa<10) { c.etapa=novaEtapa; c.checks={}; abertos[id]=false; }
-  else c.concluida=true;
-  salvarLocal(); renderLista();
+const c = CLIENTES.find(x => x.id === id);
+const et = ETAPAS[c.etapa];
+const total = et.itens.length;
+const feitos = Object.values(c.checks).filter(Boolean).length;
+if (feitos < total && !confirm(`Ainda há ${total-feitos} item(ns) não marcados. Deseja concluir mesmo assim?`)) return;
+const etapaCorreta = etapaEsperada(c);
+// Se estiver na etapa 5, mantém na 5 até faltar 120 dias para vencer
+let novaEtapa = etapaCorreta;
+// Se estiver na renovação, avança normalmente
+if (c.etapa >= 6 && c.etapa < 9) {
+novaEtapa = c.etapa + 1;
+}
+logAction(c, 'CONCLUIU', `Etapa ${c.etapa}: ${et.nome}`, novaEtapa);
+c.etapa = novaEtapa;
+c.checks = {};
+abertos[id] = false;
+salvarLocal();
+renderLista();
 }
 
 function abrirModalNok(id) {
