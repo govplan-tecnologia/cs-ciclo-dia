@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS · Ciclo do Dia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#F7F8FA; --surface:#fff; --surface2:#F0F2F5; --border:#E4E7EC; --border2:#CBD0D8;
+    --text:#111827; --text2:#4B5563; --text3:#9CA3AF;
+    --blue:#1D4ED8; --blue-l:#EFF6FF; --blue-m:#BFDBFE;
+    --green:#15803D; --green-l:#F0FDF4; --green-m:#BBF7D0;
+    --amber:#B45309; --amber-l:#FFFBEB; --amber-m:#FDE68A;
+    --red:#B91C1C; --red-l:#FEF2F2; --red-m:#FECACA;
+    --purple:#6D28D9; --purple-l:#F5F3FF; --purple-m:#DDD6FE;
+    --r:10px; --rs:6px; --sh:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  /* LOADING */
+  .loading-overlay {
+    position:fixed; inset:0; background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+    z-index:999; transition:opacity .3s;
+  }
+  .loading-overlay.hide { opacity:0; pointer-events:none; }
+  .loading-spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--blue); border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading-txt { font-size:14px; color:var(--text2); }
+
+  /* HEADER */
+  .app-header {
+    background:var(--surface); border-bottom:1px solid var(--border);
+    padding:0 24px; height:56px;
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100;
+  }
+  .app-logo { display:flex; align-items:center; gap:10px; font-size:15px; font-weight:600; }
+  .app-logo .dot { width:8px; height:8px; border-radius:50%; background:var(--blue); }
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .header-date { font-size:13px; color:var(--text2); }
+  .btn-reload { font-family:'Inter',sans-serif; font-size:12px; padding:5px 10px; border:1px solid var(--border2); border-radius:var(--rs); background:var(--surface); color:var(--text2); cursor:pointer; display:flex; align-items:center; gap:5px; }
+  .btn-reload:hover { background:var(--surface2); }
+
+  /* CONFIG BANNER */
+  .config-banner {
+    background:var(--amber-l); border-bottom:1px solid var(--amber-m);
+    padding:10px 24px; font-size:13px; color:var(--amber);
+    display:flex; align-items:center; gap:8px;
+  }
+  .config-banner input {
+    font-family:'Inter',sans-serif; font-size:12px; padding:4px 8px;
+    border:1px solid var(--amber-m); border-radius:var(--rs);
+    background:white; color:var(--text); flex:1; max-width:500px; outline:none;
+  }
+  .config-banner button {
+    font-family:'Inter',sans-serif; font-size:12px; padding:5px 12px;
+    border:1px solid var(--amber); border-radius:var(--rs);
+    background:var(--amber); color:white; cursor:pointer;
+  }
+
+  /* TOOLBAR */
+  .toolbar {
+    background:var(--surface); border-bottom:1px solid var(--border);
+    padding:12px 24px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  }
+  .toolbar select {
+    font-family:'Inter',sans-serif; font-size:13px; padding:7px 12px;
+    border:1px solid var(--border2); border-radius:var(--rs);
+    background:var(--surface); color:var(--text); outline:none; cursor:pointer;
+  }
+  .toolbar select:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(29,78,216,.1); }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+  .chip { font-size:12px; font-weight:500; padding:4px 10px; border-radius:20px; }
+  .chip-blue { background:var(--blue-l); color:var(--blue); }
+  .chip-green { background:var(--green-l); color:var(--green); }
+  .chip-amber { background:var(--amber-l); color:var(--amber); }
+  .chip-red { background:var(--red-l); color:var(--red); }
+
+  /* ETAPAS TABS */
+  .etapas-tabs { background:var(--surface); border-bottom:1px solid var(--border); padding:0 24px; display:flex; gap:2px; overflow-x:auto; }
+  .etapas-tabs::-webkit-scrollbar { height:0; }
+  .tab-btn {
+    font-family:'Inter',sans-serif; font-size:12px; font-weight:500;
+    padding:10px 14px; border:none; background:none; color:var(--text2);
+    cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; transition:all .15s;
+  }
+  .tab-btn:hover { color:var(--text); background:var(--bg); }
+  .tab-btn.active { color:var(--blue); border-bottom-color:var(--blue); }
+
+  /* MAIN */
+  .main { max-width:900px; margin:0 auto; padding:20px 24px; }
+
+  /* ATRASO BANNER */
+  .atraso-banner { background:var(--red-l); border:1px solid var(--red-m); border-radius:var(--r); padding:14px 18px; margin-bottom:20px; display:none; }
+  .atraso-banner.show { display:block; }
+  .atraso-title { font-size:13px; font-weight:600; color:var(--red); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .atraso-item { font-size:12px; color:var(--red); display:flex; align-items:center; gap:8px; padding:3px 0; }
+
+  /* CARDS */
+  .cards-list { display:flex; flex-direction:column; gap:10px; }
+  .cliente-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--sh); overflow:hidden; transition:box-shadow .15s; }
+  .cliente-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.08); }
+  .cliente-card.hoje { border-left:3px solid var(--blue); }
+  .cliente-card.atrasado { border-left:3px solid var(--red); }
+  .cliente-card.concluido { opacity:.6; }
+
+  .card-header { padding:14px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; user-select:none; }
+  .card-header:hover { background:var(--bg); }
+  .avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0; }
+  .av-b { background:var(--blue-l); color:var(--blue); }
+  .av-g { background:var(--green-l); color:var(--green); }
+  .av-a { background:var(--amber-l); color:var(--amber); }
+  .av-p { background:var(--purple-l); color:var(--purple); }
+
+  .card-info { flex:1; min-width:0; }
+  .card-nome { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-meta { font-size:12px; color:var(--text2); margin-top:3px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .hoje-dot { width:6px; height:6px; border-radius:50%; background:var(--blue); display:inline-block; }
+  .atr-dot  { width:6px; height:6px; border-radius:50%; background:var(--red);  display:inline-block; }
+
+  .card-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .etapa-pill { font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; }
+  .ep-1{background:var(--blue-l);color:var(--blue)} .ep-2{background:var(--green-l);color:var(--green)}
+  .ep-3{background:var(--amber-l);color:var(--amber)} .ep-4{background:var(--purple-l);color:var(--purple)}
+  .ep-5{background:#FDF2F8;color:#9D174D} .ep-6{background:#FFF7ED;color:#C2410C}
+  .ep-7{background:#F0FDFA;color:#0F766E} .ep-8{background:#FEF9C3;color:#854D0E}
+  .ep-9{background:#F0F9FF;color:#0369A1} .ep-10{background:#F7F8FA;color:#374151;border:1px solid var(--border)}
+  .chevron { font-size:18px; color:var(--text3); transition:transform .2s; }
+  .chevron.open { transform:rotate(180deg); }
+
+  .progress-bar-wrap { height:3px; background:var(--border); }
+  .progress-bar { height:3px; background:var(--blue); transition:width .3s; }
+
+  .card-body { display:none; border-top:1px solid var(--border); }
+  .card-body.open { display:block; }
+  .cl-section { padding:16px; }
+  .cl-section-title { font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:10px; }
+
+  .cl-item { display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+  .cl-item:last-child { border-bottom:none; }
+  .cl-checkbox { width:18px; height:18px; border-radius:4px; border:1.5px solid var(--border2); flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; margin-top:1px; }
+  .cl-checkbox.checked { background:var(--blue); border-color:var(--blue); }
+  .cl-checkbox.checked::after { content:''; display:block; width:5px; height:9px; border:2px solid white; border-top:none; border-left:none; transform:rotate(45deg) translateY(-1px); }
+  .cl-label { font-size:13px; color:var(--text); line-height:1.5; cursor:pointer; }
+  .cl-label.done { color:var(--text3); text-decoration:line-through; }
+
+  .nok-historico { margin-top:12px; padding:10px 12px; background:var(--red-l); border-radius:var(--rs); border:1px solid var(--red-m); }
+  .nok-historico-title { font-size:11px; font-weight:600; color:var(--red); margin-bottom:6px; }
+  .nok-entry { font-size:12px; color:var(--red); padding:4px 0; border-bottom:1px solid var(--red-m); }
+  .nok-entry:last-child { border-bottom:none; }
+
+  .card-footer { padding:12px 16px; border-top:1px solid var(--border); background:var(--bg); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .footer-info { font-size:12px; color:var(--text2); flex:1; }
+  .btn { font-family:'Inter',sans-serif; font-size:12px; font-weight:500; padding:6px 14px; border-radius:var(--rs); border:1px solid; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:all .15s; }
+  .btn-crm  { border-color:var(--border2); background:var(--surface); color:var(--text2); }
+  .btn-crm:hover  { background:var(--surface2); }
+  .btn-ok   { border-color:var(--green); background:transparent; color:var(--green); }
+  .btn-ok:hover   { background:var(--green-l); }
+  .btn-nok  { border-color:var(--red); background:transparent; color:var(--red); }
+  .btn-nok:hover  { background:var(--red-l); }
+
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:center; justify-content:center; z-index:200; padding:20px; }
+  .modal-overlay.show { display:flex; }
+  .modal { background:var(--surface); border-radius:var(--r); box-shadow:0 20px 60px rgba(0,0,0,.2); width:100%; max-width:480px; padding:24px; }
+  .modal-title { font-size:15px; font-weight:600; margin-bottom:6px; }
+  .modal-sub { font-size:13px; color:var(--text2); margin-bottom:16px; }
+  .modal textarea { width:100%; font-family:'Inter',sans-serif; font-size:13px; padding:10px 12px; border:1px solid var(--border2); border-radius:var(--rs); color:var(--text); resize:vertical; min-height:90px; outline:none; }
+  .modal textarea:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(29,78,216,.1); }
+  .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+  .btn-cancel { border-color:var(--border2); background:var(--surface); color:var(--text2); }
+  .btn-save-red { border-color:var(--red); background:var(--red); color:white; }
+  .btn-save-red:hover { opacity:.9; }
+
+  .empty { text-align:center; padding:48px 20px; color:var(--text3); }
+  .empty i { font-size:32px; display:block; margin-bottom:10px; }
+  .empty p { font-size:14px; }
+
+  @media(max-width:600px){
+    .main{padding:12px} .toolbar{padding:10px 12px} .etapas-tabs{padding:0 12px} .app-header{padding:0 12px} .chips{margin-left:0;width:100%}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-txt">Carregando clientes da planilha...</div>
+</div>
+
+<header class="app-header">
+  <div class="app-logo"><div class="dot"></div>CS · Ciclo do Dia</div>
+  <div class="header-right">
+    <span class="header-date" id="header-date"></span>
+    <button class="btn-reload" onclick="carregarClientes()"><i class="ti ti-refresh"></i> Atualizar</button>
+  </div>
+</header>
+
+<!-- BANNER DE CONFIGURAÇÃO -->
+<div class="config-banner" id="config-banner">
+  <i class="ti ti-settings"></i>
+  <span>Cole aqui a URL do Apps Script:</span>
+  <input type="text" id="api-url-input" placeholder="https://script.google.com/macros/s/..." />
+  <button onclick="salvarApiUrl()">Salvar e conectar</button>
+</div>
+
+<div class="toolbar">
+  <select id="sel-consultora" onchange="aplicarFiltros()">
+    <option value="all">Todas as consultoras</option>
+  </select>
+  <select id="sel-view" onchange="aplicarFiltros()">
+    <option value="hoje">Ciclo de hoje</option>
+    <option value="all">Todos os clientes</option>
+    <option value="atrasados">Apenas atrasados</option>
+  </select>
+  <div class="chips">
+    <span class="chip chip-blue"  id="chip-total">— clientes</span>
+    <span class="chip chip-green" id="chip-hoje">— hoje</span>
+    <span class="chip chip-amber" id="chip-nok">— pendentes</span>
+    <span class="chip chip-red"   id="chip-atr">— em atraso</span>
+  </div>
+</div>
+
+<div class="etapas-tabs" id="etapas-tabs">
+  <button class="tab-btn active" onclick="filtrarEtapa('all',this)">Todas</button>
+</div>
+
+<div class="main">
+  <div class="atraso-banner" id="atraso-banner">
+    <div class="atraso-title"><i class="ti ti-alert-triangle"></i> Ciclos em atraso — ação necessária</div>
+    <div class="atraso-list" id="atraso-list"></div>
+  </div>
+  <div class="cards-list" id="lista"></div>
+</div>
+
+<!-- MODAL NÃO CONCLUÍDO -->
+<div class="modal-overlay" id="modal-nok">
+  <div class="modal">
+    <div class="modal-title">Registrar impedimento</div>
+    <div class="modal-sub" id="modal-nok-sub"></div>
+    <textarea id="modal-nok-texto" placeholder="Descreva o motivo de não conclusão desta etapa..."></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-save-red" onclick="salvarNok()"><i class="ti ti-check"></i> Registrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIGURAÇÃO ──────────────────────────────────────────────────────────────
+// A URL do Apps Script é salva no localStorage do navegador
+// Na primeira vez, o usuário cola a URL no banner amarelo
+let API_URL = localStorage.getItem('cs_api_url') || '';
+
+if (API_URL) {
+  document.getElementById('config-banner').style.display = 'none';
+  document.getElementById('api-url-input').value = API_URL;
+}
+
+function salvarApiUrl() {
+  const url = document.getElementById('api-url-input').value.trim();
+  if (!url.startsWith('https://script.google.com')) {
+    alert('URL inválida. Deve começar com https://script.google.com/macros/s/...');
+    return;
+  }
+  API_URL = url;
+  localStorage.setItem('cs_api_url', url);
+  document.getElementById('config-banner').style.display = 'none';
+  carregarClientes();
+}
+
+// ─── ETAPAS / CHECKLISTS ──────────────────────────────────────────────────────
+const ETAPAS = {
+  1:{nome:'Boas-vindas',ciclo:30,itens:['Entrar no CRM (GNP) e analisar histórico comercial do cliente','Verificar a quantidade de licenças contratadas','Verificar o número de usuários já cadastrados pelo cliente','Verificar se já houve o primeiro acesso das novas contratações','Verificar a versão contratada pelo cliente','Entrar em contato com o lead (tabela de cadência)','Apresentar-se ao cliente e deixar seus contatos','Informar que fará um novo contato dentro de 30 dias','Registrar informações no GNP']},
+  2:{nome:'Verificação de uso',ciclo:30,itens:['Verificar se todos os usuários fizeram treinamento','Verificar se os usuários estão ativos e permanecem os mesmos da contratação','Abrir o relatório de uso e verificar a utilização do sistema','Entrar em contato com o lead (tabela de cadência)','Retomar contato com o cliente e verificar se há dúvidas','Apresentar os canais de comunicação da plataforma','Colocar-se à disposição para sanar dificuldades','Informar próximo contato em 30 dias','Registrar informações no GNP']},
+  3:{nome:'Acompanhamento CS',ciclo:30,itens:['Verificar se os usuários estão ativos e permanecem os mesmos da contratação','Abrir o relatório de custo','Verificar a utilização dos módulos da plataforma','Entrar em contato com o lead (tabela de cadência)','Retomar contato com o cliente','Tirar dúvidas e orientar quanto a correções necessárias','Reforçar os canais de comunicação da plataforma','Colocar-se à disposição para sanar dificuldades','Informar próximo contato em 30 dias','Registrar informações no GNP']},
+  4:{nome:'Frequência de uso',ciclo:30,itens:['Verificar se os usuários estão ativos e permanecem os mesmos da contratação','Abrir o relatório de custo','Verificar a frequência de uso dos módulos da plataforma','Entrar em contato com o lead (tabela de cadência)','Retomar contato com o cliente','Tirar dúvidas e orientar quanto a correções necessárias','Reforçar os canais de comunicação da plataforma','Colocar-se à disposição para sanar dificuldades','Informar próximo contato em 30 dias para verificação da satisfação','Registrar informações no GNP']},
+  5:{nome:'Nível de satisfação',ciclo:30,itens:['Verificar se os usuários estão ativos e permanecem os mesmos da contratação','Abrir o relatório de custo','Verificar a utilização dos módulos da plataforma','Entrar em contato com o lead (tabela de cadência)','Retomar contato com o cliente','Tirar dúvidas e orientar quanto a correções necessárias','Reforçar os canais de comunicação da plataforma','Colocar-se à disposição para sanar dificuldades','Se satisfeito: solicitar atestado de capacidade técnica e disponibilizar link de depoimento','Registrar informações no GNP']},
+  6:{nome:'Início de renovação',ciclo:15,itens:['Verificar a data fim do contrato no sistema','Levantar histórico de uso e satisfação do cliente','Preparar proposta de renovação personalizada','Entrar em contato com o gestor responsável','Apresentar proposta e condições de renovação','Registrar andamento no GNP']},
+  7:{nome:'Abre processo',ciclo:15,itens:['Confirmar aceite formal da renovação pelo cliente','Abrir processo de renovação no sistema interno','Enviar documentação necessária ao cliente','Acompanhar assinatura e retorno dos documentos','Confirmar dados cadastrais para renovação','Registrar no GNP']},
+  8:{nome:'Acomp. de empenho',ciclo:15,itens:['Verificar emissão de empenho pelo cliente','Confirmar valor e dados do empenho recebido','Encaminhar informações para o financeiro interno','Checar previsão de pagamento junto ao cliente','Registrar no GNP']},
+  9:{nome:'Previsão de empenho',ciclo:15,itens:['Confirmar previsão de empenho com o cliente','Verificar se há pendências documentais','Alinhar com financeiro sobre o prazo esperado','Registrar atualização no GNP']},
+  10:{nome:'Final de contrato',ciclo:15,itens:['Confirmar encerramento ou continuidade do contrato','Registrar resultado da renovação no GNP','Caso renovado: reiniciar ciclo de boas-vindas','Caso encerrado: registrar motivo e fazer pesquisa de churn','Arquivar documentação do ciclo encerrado']}
+};
+
+const EP_CORES = {1:'ep-1',2:'ep-2',3:'ep-3',4:'ep-4',5:'ep-5',6:'ep-6',7:'ep-7',8:'ep-8',9:'ep-9',10:'ep-10'};
+const AV_CORES = ['av-b','av-g','av-a','av-p'];
+
+// ─── ESTADO ───────────────────────────────────────────────────────────────────
+const hoje = new Date();
+let CLIENTES = [];
+let etapaFiltro = 'all';
+let consultFiltro = 'all';
+let viewFiltro = 'hoje';
+const abertos = {};
+// Progresso salvo localmente (em produção, viria do Apps Script / CS_LOG)
+const progressoLocal = JSON.parse(localStorage.getItem('cs_progresso') || '{}');
+let modalClienteId = null;
+
+document.getElementById('header-date').textContent =
+  hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+
+// ─── CARREGAR CLIENTES DA PLANILHA ────────────────────────────────────────────
+async function carregarClientes() {
+  if (!API_URL) {
+    // Modo demo com dados fictícios
+    CLIENTES = dadosDemo();
+    finalizarCarga();
+    return;
+  }
+  try {
+    document.getElementById('loading').classList.remove('hide');
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.erro);
+
+    CLIENTES = data.clientes.map((c, i) => ({
+      ...c,
+      etapa: calcEtapaAtual(c.dataInicio),
+      checks: progressoLocal[c.id]?.checks || {},
+      nok:    progressoLocal[c.id]?.nok    || [],
+      concluida: false,
+    }));
+
+    // Popula select de consultoras dinamicamente
+    const consultoras = [...new Set(CLIENTES.map(c => c.consultora).filter(Boolean))].sort();
+    const sel = document.getElementById('sel-consultora');
+    sel.innerHTML = '<option value="all">Todas as consultoras</option>';
+    consultoras.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+      sel.appendChild(opt);
+    });
+
+    finalizarCarga();
+  } catch(err) {
+    console.error(err);
+    // Fallback para demo
+    CLIENTES = dadosDemo();
+    finalizarCarga();
+    alert('Não foi possível conectar à planilha. Exibindo dados de demonstração.\n\nErro: ' + err.message);
+  }
+}
+
+function finalizarCarga() {
+  document.getElementById('loading').classList.add('hide');
+  montarTabs();
+  renderLista();
+}
+
+function salvarProgressoLocal() {
+  const obj = {};
+  CLIENTES.forEach(c => { obj[c.id] = { checks: c.checks, nok: c.nok }; });
+  localStorage.setItem('cs_progresso', JSON.stringify(obj));
+}
+
+// ─── LÓGICA DE ETAPAS ────────────────────────────────────────────────────────
+function calcDias(dataInicio) {
+  if (!dataInicio) return 0;
+  return Math.floor((hoje - new Date(dataInicio)) / (1000*60*60*24));
+}
+
+function calcEtapaAtual(dataInicio) {
+  const dias = calcDias(dataInicio);
+  if (dias < 0) return 1;
+  if (dias < 5 * 30) return Math.min(5, Math.floor(dias / 30) + 1);
+  const diasPos = dias - 5 * 30;
+  return Math.min(10, Math.floor(diasPos / 15) + 6);
+}
+
+function calcEtapaEsperada(c) {
+  return calcEtapaAtual(c.dataInicio);
+}
+
+function estaAtrasado(c) {
+  return c.etapa < calcEtapaEsperada(c) && !c.concluida;
+}
+
+function estaNoHoje(c) {
+  const dias = calcDias(c.dataInicio);
+  const etapasAnteriores = c.etapa <= 5 ? (c.etapa - 1) * 30 : 5 * 30 + (c.etapa - 6) * 15;
+  return dias >= etapasAnteriores && dias <= etapasAnteriores + 5;
+}
+
+// ─── FILTROS E TABS ───────────────────────────────────────────────────────────
+function montarTabs() {
+  const tabs = document.getElementById('etapas-tabs');
+  tabs.innerHTML = '<button class="tab-btn active" onclick="filtrarEtapa(\'all\',this)">Todas</button>';
+  Object.entries(ETAPAS).forEach(([k,v]) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn';
+    btn.textContent = `${k} · ${v.nome}`;
+    btn.onclick = function(){ filtrarEtapa(k,this); };
+    tabs.appendChild(btn);
+  });
+}
+
+function filtrarEtapa(e, btn) {
+  etapaFiltro = e;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLista();
+}
+
+function aplicarFiltros() {
+  consultFiltro = document.getElementById('sel-consultora').value;
+  viewFiltro    = document.getElementById('sel-view').value;
+  renderLista();
+}
+
+function clientesFiltrados() {
+  return CLIENTES.filter(c => {
+    if (consultFiltro !== 'all' && c.consultora !== consultFiltro) return false;
+    if (etapaFiltro !== 'all' && String(c.etapa) !== etapaFiltro) return false;
+    if (viewFiltro === 'hoje'      && !estaNoHoje(c) && !estaAtrasado(c)) return false;
+    if (viewFiltro === 'atrasados' && !estaAtrasado(c)) return false;
+    return true;
+  });
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderLista() {
+  const filtrados = clientesFiltrados();
+  const todosConsultora = CLIENTES.filter(c => consultFiltro === 'all' || c.consultora === consultFiltro);
+  const atrasados = todosConsultora.filter(estaAtrasado);
+  const comNok    = todosConsultora.filter(c => c.nok.length > 0 && !c.concluida);
+
+  document.getElementById('chip-total').textContent = filtrados.length + ' clientes';
+  document.getElementById('chip-hoje').textContent  = todosConsultora.filter(estaNoHoje).length + ' hoje';
+  document.getElementById('chip-nok').textContent   = comNok.length + ' pendentes';
+  document.getElementById('chip-atr').textContent   = atrasados.length + ' em atraso';
+
+  const banner = document.getElementById('atraso-banner');
+  if (atrasados.length > 0) {
+    banner.classList.add('show');
+    document.getElementById('atraso-list').innerHTML = atrasados.map(c => {
+      const esp = calcEtapaEsperada(c);
+      const n   = esp - c.etapa;
+      return `<div class="atraso-item"><i class="ti ti-clock-exclamation"></i>
+        <strong>${c.nome}</strong> — etapa atual ${c.etapa}, deveria estar na ${esp} (${n} ciclo${n>1?'s':''} em atraso)
+      </div>`;
+    }).join('');
+  } else {
+    banner.classList.remove('show');
+  }
+
+  const lista = document.getElementById('lista');
+  if (!filtrados.length) {
+    lista.innerHTML = `<div class="empty"><i class="ti ti-mood-empty"></i><p>Nenhum cliente encontrado.</p></div>`;
+    return;
+  }
+
+  lista.innerHTML = filtrados.map((c, idx) => {
+    const et     = ETAPAS[c.etapa] || ETAPAS[1];
+    const avCor  = AV_CORES[idx % AV_CORES.length];
+    const epCor  = EP_CORES[c.etapa] || 'ep-1';
+    const sigla  = c.nome.split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();
+    const total  = et.itens.length;
+    const feitos = Object.values(c.checks).filter(Boolean).length;
+    const pct    = total > 0 ? Math.round(feitos/total*100) : 0;
+    const isOpen = abertos[c.id];
+    const atrasado = estaAtrasado(c);
+    const noHoje   = estaNoHoje(c);
+
+    let cardClass = 'cliente-card';
+    if (c.concluida) cardClass += ' concluido';
+    else if (atrasado) cardClass += ' atrasado';
+    else if (noHoje)   cardClass += ' hoje';
+
+    const metaStatus = atrasado
+      ? `<span class="atr-dot"></span><span style="color:var(--red);font-weight:500">Em atraso</span>`
+      : noHoje
+      ? `<span class="hoje-dot"></span><span style="color:var(--blue);font-weight:500">Ciclo hoje</span>`
+      : '';
+
+    const dataInicioFmt = c.dataInicio
+      ? new Date(c.dataInicio + 'T12:00:00').toLocaleDateString('pt-BR')
+      : '—';
+
+    return `
+    <div class="${cardClass}" id="card-${c.id}">
+      <div class="card-header" onclick="toggleCard(${c.id})">
+        <div class="avatar ${avCor}">${sigla}</div>
+        <div class="card-info">
+          <div class="card-nome">${c.nome}</div>
+          <div class="card-meta">
+            <span>${calcDias(c.dataInicio)} dias</span>·
+            <span>${feitos}/${total} (${pct}%)</span>·
+            <span>${c.consultora}</span>
+            ${metaStatus ? '·' + metaStatus : ''}
+            ${c.nok.length > 0 && !c.concluida ? '·<span style="color:var(--red);font-weight:500">Pendência registrada</span>' : ''}
+            ${c.concluida ? '·<span style="color:var(--green);font-weight:500">✓ Concluído</span>' : ''}
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="etapa-pill ${epCor}">${c.etapa} · ${et.nome}</span>
+          <i class="ti ti-chevron-down chevron ${isOpen?'open':''}"></i>
+        </div>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+      <div class="card-body ${isOpen?'open':''}">
+        <div class="cl-section">
+          <div class="cl-section-title">Checklist · ${et.nome} · ciclo de ${et.ciclo} dias</div>
+          ${et.itens.map((item,i) => `
+          <div class="cl-item">
+            <div class="cl-checkbox ${c.checks[i]?'checked':''}" onclick="toggleCheck(${c.id},${i})"></div>
+            <span class="cl-label ${c.checks[i]?'done':''}" onclick="toggleCheck(${c.id},${i})">${item}</span>
+          </div>`).join('')}
+          ${c.nok.length > 0 ? `
+          <div class="nok-historico">
+            <div class="nok-historico-title"><i class="ti ti-alert-circle" style="font-size:13px"></i> Pendências registradas</div>
+            ${c.nok.map(n=>`<div class="nok-entry"><strong>${n.data}</strong> — ${n.motivo}</div>`).join('')}
+          </div>` : ''}
+        </div>
+        <div class="card-footer">
+          <span class="footer-info">Ciclo de ${et.ciclo} dias · Início: ${dataInicioFmt}${c.gnp?' · GNP: '+c.gnp:''}</span>
+          <button class="btn btn-crm" onclick="abrirCrm(${c.id})"><i class="ti ti-external-link"></i> Abrir no GNP</button>
+          <button class="btn btn-nok" onclick="abrirModalNok(${c.id})"><i class="ti ti-x"></i> Não concluído</button>
+          <button class="btn btn-ok"  onclick="concluirEtapa(${c.id})"><i class="ti ti-check"></i> Concluir etapa</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── AÇÕES ────────────────────────────────────────────────────────────────────
+function toggleCard(id) { abertos[id] = !abertos[id]; renderLista(); }
+
+function toggleCheck(clienteId, idx) {
+  const c = CLIENTES.find(x => x.id === clienteId);
+  c.checks[idx] = !c.checks[idx];
+  salvarProgressoLocal();
+  logAction(c, 'CHECK', `Item ${idx+1}: ${ETAPAS[c.etapa].itens[idx]}`);
+  renderLista();
+}
+
+function abrirCrm(id) {
+  const c = CLIENTES.find(x => x.id === id);
+  if (c.gnp) {
+    // Adapte a URL base do seu GNP aqui
+    window.open('https://app.gnp.com.br/cliente/' + c.gnp, '_blank');
+  } else {
+    alert(`GNP: ${c.nome}\n\nConfigure a URL base do CRM no código.`);
+  }
+}
+
+function concluirEtapa(id) {
+  const c = CLIENTES.find(x => x.id === id);
+  const et = ETAPAS[c.etapa];
+  const total = et.itens.length;
+  const feitos = Object.values(c.checks).filter(Boolean).length;
+  if (feitos < total) {
+    if (!confirm(`Ainda há ${total - feitos} item(ns) não marcados.\nDeseja concluir mesmo assim?`)) return;
+  }
+  logAction(c, 'CONCLUIU', `Etapa ${c.etapa}: ${et.nome}`);
+  if (c.etapa < 10) {
+    c.etapa += 1;
+    c.checks = {};
+    abertos[id] = false;
+  } else {
+    c.concluida = true;
+  }
+  salvarProgressoLocal();
+  renderLista();
+}
+
+// MODAL NOK
+function abrirModalNok(id) {
+  const c = CLIENTES.find(x => x.id === id);
+  modalClienteId = id;
+  document.getElementById('modal-nok-sub').textContent = `${c.nome} · Etapa ${c.etapa}: ${ETAPAS[c.etapa].nome}`;
+  document.getElementById('modal-nok-texto').value = '';
+  document.getElementById('modal-nok').classList.add('show');
+}
+function fecharModal() { document.getElementById('modal-nok').classList.remove('show'); modalClienteId = null; }
+function salvarNok() {
+  const texto = document.getElementById('modal-nok-texto').value.trim();
+  if (!texto) { alert('Por favor, descreva o motivo.'); return; }
+  const c = CLIENTES.find(x => x.id === modalClienteId);
+  c.nok.push({ data: hoje.toLocaleDateString('pt-BR'), motivo: texto });
+  logAction(c, 'NAO_CONCLUIU', texto);
+  salvarProgressoLocal();
+  fecharModal();
+  renderLista();
+}
+document.getElementById('modal-nok').addEventListener('click', function(e){ if(e.target===this) fecharModal(); });
+
+// LOG NO APPS SCRIPT
+async function logAction(c, acao, detalhe) {
+  if (!API_URL) return;
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        clienteId:   c.id,
+        clienteNome: c.nome,
+        consultora:  c.consultora,
+        etapa:       c.etapa,
+        acao, detalhe
+      })
+    });
+  } catch(e) { /* silencioso */ }
+}
+
+// ─── DADOS DEMO (quando não há API configurada) ───────────────────────────────
+function dadosDemo() {
+  const base = new Date();
+  function diasAtras(n) {
+    const d = new Date(base); d.setDate(d.getDate() - n);
+    return d.toISOString().split('T')[0];
+  }
+  return [
+    {id:1,gnp:'001',nome:'Prefeitura de Maringá',consultora:'taina',dataInicio:diasAtras(15),dataFim:'',checks:{},nok:[],concluida:false,etapa:1},
+    {id:2,gnp:'002',nome:'Câmara Municipal Londrina',consultora:'taina',dataInicio:diasAtras(45),dataFim:'',checks:{},nok:[],concluida:false,etapa:2},
+    {id:3,gnp:'003',nome:'SAAE Apucarana',consultora:'julia',dataInicio:diasAtras(75),dataFim:'',checks:{},nok:[],concluida:false,etapa:3},
+    {id:4,gnp:'004',nome:'Fórum Regional Norte',consultora:'camila',dataInicio:diasAtras(10),dataFim:'',checks:{},nok:[],concluida:false,etapa:1},
+    {id:5,gnp:'005',nome:'IPPUL Londrina',consultora:'taina',dataInicio:diasAtras(160),dataFim:'',checks:{},nok:[],concluida:false,etapa:6},
+    {id:6,gnp:'006',nome:'Secretaria de Saúde PR',consultora:'julia',dataInicio:diasAtras(200),dataFim:'',checks:{},nok:[],concluida:false,etapa:7},
+    {id:7,gnp:'007',nome:'DETRAN Regional',consultora:'camila',dataInicio:diasAtras(95),dataFim:'',checks:{},nok:[],concluida:false,etapa:4},
+    {id:8,gnp:'008',nome:'SANEPAR Núcleo Sul',consultora:'julia',dataInicio:diasAtras(50),dataFim:'',checks:{},nok:[],concluida:false,etapa:2},
+  ];
+}
+
+// ─── INICIAR ─────────────────────────────────────────────────────────────────
+carregarClientes();
+</script>
+</body>
+</html>
