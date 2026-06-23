@@ -4,226 +4,162 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CS · Ciclo do Dia — Govplan</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
-  --green: #4CAF1A;
-  --green-d: #3a8f12;
-  --navy: #1B2F5E;
-  --bg: #F4F6FB;
-  --surface: #fff;
-  --border: #E2E8F0;
-  --text: #1B2F5E;
-  --text2: #4A5568;
-  --red: #C0392B;
+  --green:#4CAF1A;
+  --green-d:#3a8f12;
+  --navy:#1B2F5E;
+  --bg:#F4F6FB;
+  --surface:#fff;
+  --border:#E2E8F0;
+  --text:#1B2F5E;
+  --text2:#4A5568;
+  --red:#C0392B;
 }
 
-body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); }
+body {
+  font-family: Inter, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
 
-/* (todo seu CSS original continua igual — não mexi para não quebrar UI) */
+/* LOADING */
+.loading-overlay{
+  position:fixed;inset:0;background:var(--navy);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:999;
+}
+.loading-overlay.hide{display:none}
+.loading-logo{color:#fff;font-size:28px;font-weight:700}
+.loading-logo span{color:var(--green)}
+.loading-spinner{
+  width:40px;height:40px;border-radius:50%;
+  border:3px solid rgba(255,255,255,.2);
+  border-top-color:var(--green);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
 
+/* HEADER */
+.app-header{
+  background:var(--navy);
+  color:#fff;
+  height:60px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+}
+
+/* HERO */
+.hero-banner{
+  background:linear-gradient(135deg,var(--navy),#2a4a8a);
+  color:#fff;
+  padding:20px;
+}
+
+/* LIST */
+.cards-list{padding:20px}
+
+.card{
+  background:#fff;
+  padding:14px;
+  border-radius:10px;
+  margin-bottom:10px;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
 </style>
 </head>
 
 <body>
 
-<!-- LOADING -->
 <div class="loading-overlay" id="loading">
   <div class="loading-logo">GOV<span>PLAN</span></div>
   <div class="loading-spinner"></div>
 </div>
 
 <header class="app-header">
-  <div class="app-logo">CS · GOVPLAN</div>
+  <div>GOVPLAN · CS</div>
   <button onclick="carregarClientes()">Atualizar</button>
 </header>
 
-<div class="main">
-  <div id="lista"></div>
+<div class="hero-banner">
+  <h2 id="hero-greeting">Bom dia!</h2>
+  <p id="hero-sub">Carregando dados...</p>
 </div>
+
+<div class="cards-list" id="lista"></div>
 
 <script>
 
+/* ================= CONFIG ================= */
 let API_URL = localStorage.getItem('cs_api_url') || '';
 
-const hoje = new Date();
+/* ================= STATE ================= */
 let CLIENTES = [];
 let abertos = {};
-const progressoLocal = JSON.parse(localStorage.getItem('cs_progresso') || '{}');
 
-/* =========================
-   📌 ETAPAS (9 ETAPAS)
-========================= */
-const ETAPAS = {
-  1:{nome:'Boas-vindas', itens:['Onboarding','Contato inicial']},
-  2:{nome:'Verificação de uso', itens:['Uso inicial','Treinamento']},
-  3:{nome:'Acompanhamento CS', itens:['Check uso','Suporte']},
-  4:{nome:'Frequência de uso', itens:['Análise uso','Engajamento']},
-  5:{nome:'Nível de satisfação', itens:['NPS','Feedback']},
-  6:{nome:'Início de renovação', itens:['Verificar contrato','Contato renovação']},
-  7:{nome:'Acompanhamento de renovação', itens:['Negociação','Documentos']},
-  8:{nome:'Previsão de empenho', itens:['Empenho','Financeiro']},
-  9:{nome:'Renovação', itens:['Fechamento','Atualização contrato']}
-};
-
-/* =========================
-   📌 DATA HELPERS
-========================= */
-function diasAteFim(c){
-  if(!c.dataFim) return 9999;
-  return Math.floor((new Date(c.dataFim) - hoje)/86400000);
-}
-
-function diasDesdeInicio(c){
-  return Math.floor((hoje - new Date(c.dataInicio))/86400000);
-}
-
-/* =========================
-   📌 NOVA LÓGICA DE ETAPA
-========================= */
-function etapaEsperada(c){
-
-  const inicio = diasDesdeInicio(c);
-  const fim = diasAteFim(c);
-
-  // 🔴 RENOVAÇÃO (últimos 120 dias)
-  if(fim <= 120){
-    if(fim <= 30) return 9;
-    if(fim <= 60) return 8;
-    if(fim <= 90) return 7;
-    return 6;
-  }
-
-  // 🟢 CICLO NORMAL
-  if(inicio < 30) return 1;
-  if(inicio < 60) return 2;
-  if(inicio < 90) return 3;
-  if(inicio < 120) return 4;
-
-  return 5;
-}
-
-function estaNoHoje(c){
-  return c.etapa === etapaEsperada(c);
-}
-
-function estaAtrasado(c){
-  return c.etapa < etapaEsperada(c);
-}
-
-/* =========================
-   📌 CARREGAMENTO
-========================= */
-async function carregarClientes(){
-
-  if(!API_URL){
-    CLIENTES = dadosDemo();
-    render();
-    return;
-  }
-
-  const res = await fetch(API_URL);
-  const data = await res.json();
-
-  CLIENTES = data.clientes.map(c => ({
-    ...c,
-    etapa: c.etapaAtual || etapaEsperada(c),
-    checks: progressoLocal[c.id]?.checks || {},
-    nok: progressoLocal[c.id]?.nok || []
-  }));
-
-  render();
-}
-
-/* =========================
-   📌 SALVAR
-========================= */
-function salvarLocal(){
-  const obj = {};
-  CLIENTES.forEach(c=>{
-    obj[c.id] = {checks:c.checks,nok:c.nok};
-  });
-  localStorage.setItem('cs_progresso', JSON.stringify(obj));
-}
-
-/* =========================
-   📌 CONCLUIR ETAPA (CORRIGIDO)
-========================= */
-function concluirEtapa(id){
-
-  const c = CLIENTES.find(x=>x.id===id);
-  const et = ETAPAS[c.etapa];
-
-  const total = et.itens.length;
-  const feitos = Object.values(c.checks).filter(Boolean).length;
-
-  if(feitos < total && !confirm('Ainda faltam itens. Concluir mesmo assim?')) return;
-
-  c.etapa = etapaEsperada(c);
-  c.checks = {};
-  abertos[id] = false;
-
-  salvarLocal();
-  render();
-}
-
-/* =========================
-   📌 TOGGLE CHECK
-========================= */
-function toggleCheck(id,i){
-  const c = CLIENTES.find(x=>x.id===id);
-  c.checks[i] = !c.checks[i];
-  salvarLocal();
-  render();
-}
-
-/* =========================
-   📌 RENDER SIMPLIFICADO
-========================= */
-function render(){
-
-  const lista = document.getElementById('lista');
-
-  lista.innerHTML = CLIENTES.map(c=>{
-
-    const et = ETAPAS[c.etapa];
-    const pct = Math.round((Object.values(c.checks).filter(Boolean).length / et.itens.length)*100);
-
-    return `
-      <div class="card">
-        <h3>${c.nome}</h3>
-        <p>Etapa ${c.etapa} - ${et.nome}</p>
-        <p>${pct}% concluído</p>
-
-        ${et.itens.map((i,idx)=>`
-          <div onclick="toggleCheck(${c.id},${idx})">
-            ${c.checks[idx] ? "✅" : "⬜"} ${i}
-          </div>
-        `).join('')}
-
-        <button onclick="concluirEtapa(${c.id})">Concluir etapa</button>
-      </div>
-    `;
-  }).join('');
-}
-
-/* =========================
-   📌 DEMO
-========================= */
+/* ================= DEMO ================= */
 function dadosDemo(){
-  const d = new Date();
-  const dias = n => new Date(d.getTime()-n*86400000).toISOString().split('T')[0];
-
   return [
-    {id:1,nome:"Cliente A",dataInicio:dias(10),dataFim:dias(-200),etapa:1,checks:{}},
-    {id:2,nome:"Cliente B",dataInicio:dias(80),dataFim:dias(100),etapa:2,checks:{}},
-    {id:3,nome:"Cliente C",dataInicio:dias(200),dataFim:dias(50),etapa:6,checks:{}}
+    {id:1,nome:"Prefeitura de Maringá",consultora:"taina",dataInicio:"2025-06-01",etapa:1,checks:{},nok:[]},
+    {id:2,nome:"Câmara Londrina",consultora:"karina",dataInicio:"2025-04-10",etapa:2,checks:{},nok:[]}
   ];
 }
 
+/* ================= LOAD ================= */
+async function carregarClientes(){
+  document.getElementById("loading").classList.remove("hide");
+
+  try{
+    if(!API_URL) throw new Error("sem API");
+
+    const res = await fetch(API_URL);
+    const data = await res.json();
+
+    CLIENTES = (data?.clientes || []).map(c => ({
+      id:c.id,
+      nome:c.nome || "Sem nome",
+      consultora:c.consultora || "—",
+      dataInicio:c.dataInicio || null,
+      etapa:c.etapa || 1,
+      checks:c.checks || {},
+      nok:c.nok || []
+    }));
+
+  } catch(e){
+    CLIENTES = dadosDemo();
+  }
+
+  document.getElementById("loading").classList.add("hide");
+  render();
+}
+
+/* ================= RENDER ================= */
+function render(){
+  const el = document.getElementById("lista");
+
+  el.innerHTML = CLIENTES.map(c => {
+    const nome = c.nome || "Sem nome";
+    const etapa = c.etapa || 1;
+
+    return `
+      <div class="card">
+        <strong>${nome}</strong><br>
+        <small>Etapa ${etapa}</small>
+      </div>
+    `;
+  }).join("");
+}
+
+/* ================= INIT ================= */
 carregarClientes();
 
 </script>
