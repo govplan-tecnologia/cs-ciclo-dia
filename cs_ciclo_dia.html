@@ -1,352 +1,712 @@
-const ABA_NOME = 'Assinantes';
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS · Ciclo do Dia — Govplan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#4CAF1A;--green-d:#3a8f12;--green-l:#f0fae6;--green-m:#c6efaa;
+  --navy:#1B2F5E;--navy-l:#e8ecf5;
+  --bg:#F4F6FB;--surface:#fff;--border:#E2E8F0;--border2:#CBD5E1;
+  --text:#1B2F5E;--text2:#4A5568;--text3:#94A3B8;
+  --red:#C0392B;--red-l:#FEF2F2;--red-m:#FECACA;--red-d:#7B1D1D;
+  --amber:#B45309;--amber-l:#FFFBEB;--amber-m:#FDE68A;
+  --r:12px;--rs:8px;
+  --sh:0 1px 3px rgba(27,47,94,.08),0 1px 2px rgba(27,47,94,.05);
+  --sh-lg:0 8px 24px rgba(27,47,94,.12);
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-const COL = {
-  gnp:           0,
-  razaoSocial:   1,
-  segmento:      2,
-  consultor:     3,
-  uf:            4,
-  estado:        5,
-  valor:         6,
-  etp:           7,
-  envioProp:     8,
-  dataInicio:    9,
-  dataFim:       10,
-  dataAtual:     11,
-  diasVig:       12,
-  contratacao:   13,
-  tempoContrato: 14,
-  ambito:        15,
-  modalidade:    16,
-  populacao:     17,
-  status:        18,
-  consultoraCS:  19,
-  etapaAtualCS:  20,
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:999;transition:opacity .4s}
+.loading-overlay.hide{opacity:0;pointer-events:none}
+.loading-logo{font-size:28px;font-weight:700;color:white}.loading-logo span{color:var(--green)}
+.loading-spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+.loading-txt{font-size:14px;color:rgba(255,255,255,.6)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* HEADER */
+.app-header{background:var(--navy);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(27,47,94,.3)}
+.app-logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:28px;height:28px;background:var(--green);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.logo-icon i{color:white;font-size:16px}
+.logo-text{font-size:15px;font-weight:700;color:white}.logo-text span{color:var(--green)}
+.header-right{display:flex;align-items:center;gap:10px}
+.header-date{font-size:12px;color:rgba(255,255,255,.6)}
+.btn-reload{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;padding:5px 10px;border:1.5px solid rgba(255,255,255,.2);border-radius:var(--rs);background:transparent;color:rgba(255,255,255,.8);cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s}
+.btn-reload:hover{background:rgba(255,255,255,.1)}
+
+/* CONFIG */
+.config-banner{background:var(--amber-l);border-bottom:1px solid var(--amber-m);padding:10px 28px;font-size:13px;color:var(--amber);display:flex;align-items:center;gap:10px}
+.config-banner input{font-family:'Inter',sans-serif;font-size:12px;padding:6px 10px;border:1px solid var(--amber-m);border-radius:var(--rs);background:white;color:var(--text);flex:1;max-width:500px;outline:none}
+.config-banner button{font-family:'Inter',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border:none;border-radius:var(--rs);background:var(--amber);color:white;cursor:pointer}
+
+/* HERO — mais compacto */
+.hero-banner{background:linear-gradient(135deg,var(--navy) 0%,#2a4a8a 100%);padding:16px 28px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.hero-text{flex:1;min-width:180px}
+.hero-greeting{font-size:12px;color:rgba(255,255,255,.6)}
+.hero-title{font-size:18px;font-weight:700;color:white;margin:2px 0}
+.hero-sub{font-size:12px;color:rgba(255,255,255,.7)}
+.hero-cards{display:flex;gap:10px;flex-wrap:wrap}
+.hero-card{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:var(--rs);padding:10px 16px;min-width:100px;text-align:center}
+.hero-card-num{font-size:24px;font-weight:700;color:white;line-height:1}
+.hero-card-num.green{color:var(--green)}.hero-card-num.red{color:#FF6B6B}
+.hero-card-label{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}
+
+/* TOOLBAR */
+.toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 28px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.toolbar select{font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--rs);background:var(--surface);color:var(--text);outline:none;cursor:pointer}
+.toolbar select:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(76,175,26,.15)}
+.search-box{position:relative;flex:1;max-width:260px}
+.search-box i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px}
+.search-box input{font-family:'Inter',sans-serif;font-size:13px;padding:7px 10px 7px 32px;border:1.5px solid var(--border2);border-radius:var(--rs);background:var(--surface);color:var(--text);outline:none;width:100%}
+.search-box input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(76,175,26,.15)}
+
+/* TABS */
+.etapas-tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;gap:2px;overflow-x:auto}
+.etapas-tabs::-webkit-scrollbar{height:0}
+.tab-btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;padding:10px 13px;border:none;background:none;color:var(--text2);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .15s}
+.tab-btn:hover{color:var(--navy)}.tab-btn.active{color:var(--green-d);border-bottom-color:var(--green)}
+
+.main{max-width:960px;margin:0 auto;padding:20px 28px}
+
+/* ATRASO BANNER */
+.atraso-banner{background:var(--red-l);border:1.5px solid var(--red-m);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;display:none}
+.atraso-banner.show{display:block}
+.atraso-title{font-size:13px;font-weight:600;color:var(--red);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.atraso-item{font-size:12px;color:var(--red);display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--red-m)}
+.atraso-item:last-child{border-bottom:none}
+
+/* CARDS */
+.cards-list{display:flex;flex-direction:column;gap:10px}
+.cliente-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;transition:box-shadow .2s,transform .1s}
+.cliente-card:hover{box-shadow:var(--sh-lg);transform:translateY(-1px)}
+
+/* Cores por etapa */
+.cliente-card.ep-1{border-left:4px solid #1D4ED8}
+.cliente-card.ep-2{border-left:4px solid #15803D}
+.cliente-card.ep-3{border-left:4px solid #B45309}
+.cliente-card.ep-4{border-left:4px solid #6D28D9}
+.cliente-card.ep-5{border-left:4px solid #9D174D}
+.cliente-card.ep-6{border-left:4px solid #C2410C}
+.cliente-card.ep-7{border-left:4px solid #0F766E}
+.cliente-card.ep-8{border-left:4px solid #0369A1}
+.cliente-card.ep-9{border-left:4px solid var(--green-d)}
+
+/* Card atrasado — TUDO VERMELHO */
+.cliente-card.atrasado{border:1.5px solid var(--red-m);border-left:4px solid var(--red);background:var(--red-l)}
+.cliente-card.atrasado .card-header:hover{background:#fde8e8}
+.cliente-card.atrasado .card-nome{color:var(--red-d)}
+.cliente-card.atrasado .card-meta{color:var(--red)}
+.cliente-card.atrasado .dias-fim{color:var(--red)!important;font-weight:600}
+.cliente-card.atrasado .progress-bar{background:var(--red)}
+.cliente-card.concluido{opacity:.55}
+.cliente-card.concluido-hoje{border-left:4px solid var(--green)!important;background:#f0fae6}
+.cliente-card.concluido-hoje .card-header:hover{background:#e6f7d9}
+.cliente-card.concluido-hoje .card-nome{color:var(--green-d)}
+.cliente-card.concluido-hoje .etapa-pill{background:var(--green-l);color:var(--green-d)}
+.cliente-card.concluido-hoje .progress-bar{background:var(--green)}
+
+
+.card-header{padding:16px 18px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
+.card-header:hover{background:#FAFBFF}
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.av-1{background:#DBEAFE;color:#1D4ED8}.av-2{background:#DCFCE7;color:#15803D}
+.av-3{background:#FEF9C3;color:#854D0E}.av-4{background:#EDE9FE;color:#6D28D9}
+.av-5{background:#FCE7F3;color:#9D174D}.av-6{background:#FFEDD5;color:#C2410C}
+.av-7{background:#CCFBF1;color:#0F766E}.av-8{background:#E0F2FE;color:#0369A1}
+.av-9{background:var(--green-l);color:var(--green-d)}
+.atrasado .avatar{background:var(--red-m);color:var(--red-d)}
+
+.card-info{flex:1;min-width:0}
+.card-nome{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-meta{font-size:12px;color:var(--text2);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.meta-sep{color:var(--text3)}
+
+/* BOLINHAS DE ETAPAS */
+.etapa-dots{display:flex;align-items:center;gap:4px;margin-top:6px}
+.etapa-dot{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;position:relative;cursor:default}
+.etapa-dot.concluida{background:var(--green);color:white}
+.etapa-dot.atual{background:var(--amber);color:white;box-shadow:0 0 0 2px white,0 0 0 3px var(--amber)}
+.etapa-dot.atrasada{background:var(--red);color:white}
+.etapa-dot.futura{background:var(--border2);color:var(--text3)}
+.etapa-dot-label{font-size:9px;color:var(--text3);margin-left:2px}
+
+.badge-hoje{background:var(--navy-l);color:var(--navy);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+.badge-atr{background:var(--red);color:white;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+.badge-nok{background:var(--amber-l);color:var(--amber);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+.badge-ok{background:var(--green-l);color:var(--green-d);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+
+.card-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.etapa-pill{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
+.ep-pill-1{background:#DBEAFE;color:#1D4ED8}.ep-pill-2{background:#DCFCE7;color:#15803D}
+.ep-pill-3{background:#FEF9C3;color:#854D0E}.ep-pill-4{background:#EDE9FE;color:#6D28D9}
+.ep-pill-5{background:#FCE7F3;color:#9D174D}.ep-pill-6{background:#FFEDD5;color:#C2410C}
+.ep-pill-7{background:#CCFBF1;color:#0F766E}.ep-pill-8{background:#E0F2FE;color:#0369A1}
+.ep-pill-9{background:var(--green-l);color:var(--green-d)}
+.atrasado .etapa-pill{background:var(--red);color:white}
+.chevron{font-size:18px;color:var(--text3);transition:transform .2s}
+.chevron.open{transform:rotate(180deg)}
+
+.dias-fim{font-size:11px;color:var(--text3);margin-top:2px}
+.dias-fim.urgente{color:var(--red);font-weight:600}
+.dias-fim.atencao{color:var(--amber);font-weight:600}
+
+.progress-wrap{height:3px;background:var(--border)}
+.progress-bar{height:3px;background:linear-gradient(90deg,var(--green),var(--green-d));transition:width .4s}
+
+/* BODY */
+.card-body{display:none;border-top:1.5px solid var(--border)}
+.card-body.open{display:block}
+.cl-section{padding:18px}
+.cl-section-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.cl-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.cl-item:last-child{border-bottom:none}
+.cl-checkbox{width:20px;height:20px;border-radius:5px;border:2px solid var(--border2);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;margin-top:1px}
+.cl-checkbox.checked{background:var(--green);border-color:var(--green)}
+.cl-checkbox.checked::after{content:'';display:block;width:5px;height:10px;border:2px solid white;border-top:none;border-left:none;transform:rotate(45deg) translateY(-1px)}
+.cl-label{font-size:13px;color:var(--text);line-height:1.6;cursor:pointer}
+.cl-label.done{color:var(--text3);text-decoration:line-through}
+
+.nok-historico{margin-top:12px;padding:10px 12px;background:var(--red-l);border-radius:var(--rs);border:1px solid var(--red-m)}
+.nok-historico-title{font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px}
+.nok-entry{font-size:12px;color:var(--red);padding:4px 0;border-bottom:1px solid var(--red-m)}
+.nok-entry:last-child{border-bottom:none}
+
+.card-footer{padding:12px 18px;border-top:1.5px solid var(--border);background:#FAFBFF;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.footer-info{font-size:12px;color:var(--text2);flex:1}
+.btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border-radius:var(--rs);border:1.5px solid;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .15s}
+.btn-crm{border-color:var(--border2);background:var(--surface);color:var(--text2)}
+.btn-crm:hover{background:var(--bg);border-color:var(--navy)}
+.btn-ok{border-color:var(--green);background:var(--green);color:white}
+.btn-ok:hover{background:var(--green-d)}
+.btn-nok{border-color:var(--red);background:transparent;color:var(--red)}
+.btn-nok:hover{background:var(--red-l)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(27,47,94,.5);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:var(--r);box-shadow:0 24px 64px rgba(27,47,94,.2);width:100%;max-width:480px;padding:24px}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--text2);margin-bottom:16px}
+.modal textarea{width:100%;font-family:'Inter',sans-serif;font-size:13px;padding:10px;border:1.5px solid var(--border2);border-radius:var(--rs);color:var(--text);resize:vertical;min-height:90px;outline:none}
+.modal textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(76,175,26,.15)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.btn-cancel{border-color:var(--border2);background:var(--surface);color:var(--text2)}
+.btn-save-red{border-color:var(--red);background:var(--red);color:white}
+
+.empty{text-align:center;padding:48px 20px;color:var(--text3)}
+.empty i{font-size:36px;display:block;margin-bottom:10px;color:var(--border2)}
+
+/* FOOTER */
+.app-footer{margin-top:40px;padding:16px 28px;border-top:1px solid var(--border);text-align:center}
+.footer-logo{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.footer-logo span{color:var(--green)}
+.footer-dev{font-size:11px;color:var(--text3)}
+.footer-dev strong{color:var(--text2)}
+
+@media(max-width:600px){
+  .main{padding:12px}.toolbar{padding:8px 12px}.etapas-tabs{padding:0 12px}
+  .app-header{padding:0 12px}.hero-banner{padding:12px}
+  .card-header{padding:12px 14px}.cl-section{padding:14px}.card-footer{padding:10px 14px}
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="loading-logo">GOV<span>PLAN</span></div>
+  <div class="loading-spinner"></div>
+  <div class="loading-txt">Carregando clientes...</div>
+</div>
+
+<header class="app-header">
+  <div class="app-logo">
+    <div class="logo-icon"><i class="ti ti-check"></i></div>
+    <div class="logo-text">GOV<span>PLAN</span> · CS</div>
+  </div>
+  <div class="header-right">
+    <span class="header-date" id="header-date"></span>
+    <button class="btn-reload" onclick="carregarClientes()"><i class="ti ti-refresh"></i> Atualizar</button>
+  </div>
+</header>
+
+<div class="config-banner" id="config-banner">
+  <i class="ti ti-settings"></i>
+  <span>Cole a URL do Apps Script:</span>
+  <input type="text" id="api-url-input" placeholder="https://script.google.com/macros/s/..."/>
+  <button onclick="salvarApiUrl()">Conectar</button>
+</div>
+
+<div class="hero-banner">
+  <div class="hero-text">
+    <div class="hero-greeting" id="hero-greeting">Bom dia!</div>
+    <div class="hero-title">Ciclo do Dia — CS</div>
+    <div class="hero-sub" id="hero-sub">Carregando...</div>
+  </div>
+  <div class="hero-cards">
+    <div class="hero-card"><div class="hero-card-num green" id="hc-hoje">—</div><div class="hero-card-label">No ciclo hoje</div></div>
+    <div class="hero-card"><div class="hero-card-num" id="hc-total">—</div><div class="hero-card-label">Total vigentes</div></div>
+    <div class="hero-card"><div class="hero-card-num red" id="hc-atr">—</div><div class="hero-card-label">Em atraso</div></div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <select id="sel-consultora" onchange="aplicarFiltros()">
+    <option value="all">Todas as consultoras</option>
+  </select>
+  <select id="sel-view" onchange="aplicarFiltros()">
+    <option value="hoje">Ciclo de hoje</option>
+    <option value="all">Todos os clientes</option>
+    <option value="atrasados">Apenas atrasados</option>
+  </select>
+  <div class="search-box">
+    <i class="ti ti-search"></i>
+    <input type="text" id="search-input" placeholder="Buscar cliente..." oninput="aplicarFiltros()">
+  </div>
+</div>
+
+<div class="etapas-tabs" id="etapas-tabs">
+  <button class="tab-btn active" onclick="filtrarEtapa('all',this)">Todas</button>
+</div>
+
+<div class="main">
+  <div class="atraso-banner" id="atraso-banner">
+    <div class="atraso-title"><i class="ti ti-alert-triangle"></i> Ciclos em atraso — ação necessária</div>
+    <div id="atraso-list"></div>
+  </div>
+  <div class="cards-list" id="lista"></div>
+</div>
+
+<footer class="app-footer">
+  <div class="footer-logo">GOV<span>PLAN</span> · CS Ciclo do Dia</div>
+  <div class="footer-dev">Desenvolvido por <strong>Monithelly</strong> · Govplan</div>
+</footer>
+
+<div class="modal-overlay" id="modal-nok">
+  <div class="modal">
+    <div class="modal-title">Registrar impedimento</div>
+    <div class="modal-sub" id="modal-nok-sub"></div>
+    <textarea id="modal-nok-texto" placeholder="Descreva o motivo de não conclusão desta etapa..."></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-save-red" onclick="salvarNok()"><i class="ti ti-check"></i> Registrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+let API_URL = localStorage.getItem('cs_api_url') || '';
+if (API_URL) document.getElementById('config-banner').style.display = 'none';
+
+function salvarApiUrl() {
+  const url = document.getElementById('api-url-input').value.trim();
+  if (!url.startsWith('https://script.google.com')) { alert('URL inválida.'); return; }
+  API_URL = url;
+  localStorage.setItem('cs_api_url', url);
+  document.getElementById('config-banner').style.display = 'none';
+  carregarClientes();
+}
+
+// ─── ETAPAS ──────────────────────────────────────────────────────────────────
+const ETAPAS = {
+  1:{nome:'Boas-vindas',itens:['Analisar histórico comercial do cliente no GNP','Verificar licenças contratadas e usuários cadastrados','Entrar em contato com o lead e apresentar-se','Registrar informações no GNP']},
+  2:{nome:'Verificação de uso',itens:['Verificar se usuários realizaram treinamento','Abrir relatório de uso e analisar utilização','Contatar cliente, tirar dúvidas e apresentar canais de suporte','Registrar informações no GNP']},
+  3:{nome:'Acompanhamento CS',itens:['Verificar usuários ativos e abrir relatório de custo','Verificar utilização dos módulos da plataforma','Contatar cliente, tirar dúvidas e orientar correções','Registrar informações no GNP']},
+  4:{nome:'Frequência de uso',itens:['Verificar frequência de uso dos módulos','Abrir relatório de custo e analisar engajamento','Contatar cliente e reforçar canais de comunicação','Registrar informações no GNP']},
+  5:{nome:'Nível de satisfação',itens:['Verificar utilização dos módulos e abrir relatório de custo','Contatar cliente e aplicar pesquisa de satisfação','Se satisfeito: solicitar atestado e link de depoimento','Registrar informações no GNP']},
+  6:{nome:'Início de renovação',itens:['Levantar histórico de uso e satisfação do cliente','Preparar e apresentar proposta de renovação','Negociar condições e registrar andamento no GNP','Alinhar próximos passos com o cliente']},
+  7:{nome:'Acomp. de renovação',itens:['Confirmar aceite da renovação pelo cliente','Abrir processo e enviar documentação necessária','Acompanhar assinatura dos documentos','Registrar andamento no GNP']},
+  8:{nome:'Previsão de empenho',itens:['Confirmar previsão de empenho com o cliente','Verificar pendências documentais','Alinhar prazo com o financeiro interno','Registrar atualização no GNP']},
+  9:{nome:'Renovação',itens:['Confirmar emissão e valor do empenho','Encaminhar documentação para o financeiro','Registrar conclusão da renovação no GNP','Reiniciar ciclo de acompanhamento CS']}
 };
 
+// Sequência dos 8 primeiros meses: 1,2,3,4,5,2,3,4
 const SEQ_INICIO = [1,2,3,4,5,2,3,4];
 
-const ETAPAS_NOMES = {
-  1:'Boas-vindas', 2:'Verificação de uso', 3:'Acompanhamento CS',
-  4:'Frequência de uso', 5:'Nível de satisfação', 6:'Início de renovação',
-  7:'Acomp. de renovação', 8:'Previsão de empenho', 9:'Renovação'
-};
-
+// ─── LÓGICA DE ETAPA ─────────────────────────────────────────────────────────
 function calcEtapaEsperada(dataInicio, dataFim) {
   if (!dataInicio) return 1;
+  const dIni = new Date(dataInicio + 'T12:00:00');
+  const dFim = dataFim ? new Date(dataFim + 'T12:00:00') : null;
   const hoje = new Date();
-  const dIni = new Date(dataInicio);
-  const dFim = dataFim ? new Date(dataFim) : null;
 
-  const diasDeInicio = Math.floor((hoje - dIni) / (1000*60*60*24));
-  const diasParaFim  = dFim ? Math.floor((dFim - hoje) / (1000*60*60*24)) : 9999;
+  const diasDeInicio = Math.floor((hoje - dIni) / 864e5);
+  const diasParaFim  = dFim ? Math.floor((dFim - hoje) / 864e5) : 9999;
 
+  // Etapas 6-9: últimos 4 meses pelo fim
   if (dFim) {
-    if (diasParaFim <= 15)  return 9;
-    if (diasParaFim <= 30)  return 8;
-    if (diasParaFim <= 60)  return 7;
-    if (diasParaFim <= 90)  return 7;
-    if (diasParaFim <= 120) return 6;
+    if (diasParaFim <= 0)   return 9;
+    if (diasParaFim <= 15)  return 9; // última quinzena
+    if (diasParaFim <= 30)  return 8; // primeira quinzena do último mês
+    if (diasParaFim <= 60)  return 7; // 2 meses antes
+    if (diasParaFim <= 90)  return 7; // 3 meses antes (etapa 7 aparece 2x)
+    if (diasParaFim <= 120) return 6; // 4 meses antes
   }
 
+  // Etapas 1-5 + ciclo: primeiros 8 meses pela data início
   if (diasDeInicio < 0) return 1;
   const mesIdx = Math.min(7, Math.floor(diasDeInicio / 30));
   return SEQ_INICIO[mesIdx];
 }
 
-function doGet(e) {
+// Data exata em que cada etapa "cai" para o cliente
+function dataCiclo(dataInicio, dataFim, etapa) {
+  const dIni = new Date(dataInicio + 'T12:00:00');
+  const dFim = dataFim ? new Date(dataFim + 'T12:00:00') : null;
+
+  if (etapa <= 5 || !dFim) {
+    // pelo início: encontra qual mês na sequência corresponde a essa etapa
+    for (let i = 0; i < 8; i++) {
+      if (SEQ_INICIO[i] === etapa) {
+        const d = new Date(dIni);
+        d.setDate(d.getDate() + i * 30);
+        return d;
+      }
+    }
+    return dIni;
+  }
+
+  // pelo fim
+  const offsets = {6: 120, 7: 90, 8: 30, 9: 15};
+  const off = offsets[etapa] || 30;
+  const d = new Date(dFim);
+  d.setDate(d.getDate() - off);
+  return d;
+}
+
+function estaNoHojeReal(c) {
+  // Cálculo real — usado para montar o cache
+  const etapaEsp = calcEtapaEsperada(c.dataInicio, c.dataFim);
+  if (c.etapa !== etapaEsp) return false;
+  const dc = dataCiclo(c.dataInicio, c.dataFim, c.etapa);
+  const diffDias = Math.floor((hoje - dc) / 864e5);
+  const janela = c.etapa >= 8 ? 1 : 2;
+  return diffDias >= 0 && diffDias <= janela;
+}
+
+function estaNoHoje(c) {
+  // Usa o cache do dia — fixo até meia-noite
+  if (cacheCicloHoje) return cacheCicloHoje.has(c.id);
+  return estaNoHojeReal(c);
+}
+
+function estaAtrasado(c) {
+  if (c.concluida) return false;
+  const etapaEsp = calcEtapaEsperada(c.dataInicio, c.dataFim);
+  return c.etapa < etapaEsp;
+}
+
+function diasParaFimContrato(c) {
+  if (!c.dataFim) return null;
+  return Math.floor((new Date(c.dataFim + 'T12:00:00') - new Date()) / 864e5);
+}
+
+// ─── CARREGAR ────────────────────────────────────────────────────────────────
+const hoje = new Date();
+let CLIENTES = [];
+let etapaFiltro='all', consultFiltro='all', viewFiltro='hoje', searchTerm='';
+const abertos = {};
+const progressoLocal = JSON.parse(localStorage.getItem('cs_progresso') || '{}');
+let modalClienteId = null;
+
+const hora = hoje.getHours();
+
+// ─── CACHE DO CICLO DO DIA ───────────────────────────────────────────────────
+// Guarda quais IDs estavam no ciclo quando a página abriu hoje
+// Reseta automaticamente na virada do dia
+const HOJE_STR = hoje.toISOString().split('T')[0]; // "2026-06-25"
+let cacheCicloHoje = null;
+
+function getCacheCiclo() {
+  const saved = localStorage.getItem('cs_ciclo_cache');
+  if (!saved) return null;
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const aba = ss.getSheetByName(ABA_NOME);
-    const dados = aba.getDataRange().getValues();
-    const clientes = [];
-    const gnpsVistos = new Set();
-
-    for (let i = 1; i < dados.length; i++) {
-      const row = dados[i];
-      if (!row[COL.razaoSocial]) continue;
-      if (String(row[COL.status]).toLowerCase().trim() !== 'vigente') continue;
-
-      const gnp = String(row[COL.gnp]).trim();
-      if (gnp && gnpsVistos.has(gnp)) continue;
-      if (gnp) gnpsVistos.add(gnp);
-
-      const dataInicio = row[COL.dataInicio] ? new Date(row[COL.dataInicio]) : null;
-      const dataFim    = row[COL.dataFim]    ? new Date(row[COL.dataFim])    : null;
-      const consultora = normalizar(String(row[COL.consultoraCS] || ''));
-
-      const etapaSalva     = row[COL.etapaAtualCS] ? parseInt(row[COL.etapaAtualCS]) : null;
-      const etapaCalculada = calcEtapaEsperada(
-        dataInicio ? Utilities.formatDate(dataInicio,'America/Sao_Paulo','yyyy-MM-dd') : null,
-        dataFim    ? Utilities.formatDate(dataFim,   'America/Sao_Paulo','yyyy-MM-dd') : null
-      );
-      const etapaAtual = etapaSalva || etapaCalculada;
-
-      clientes.push({
-        id:             i,
-        rowIndex:       i + 1,
-        gnp:            gnp,
-        nome:           row[COL.razaoSocial]  || '',
-        segmento:       row[COL.segmento]     || '',
-        consultora:     consultora,
-        uf:             row[COL.uf]           || '',
-        valor:          row[COL.valor]        || 0,
-        dataInicio:     dataInicio ? Utilities.formatDate(dataInicio,'America/Sao_Paulo','yyyy-MM-dd') : '',
-        dataFim:        dataFim    ? Utilities.formatDate(dataFim,   'America/Sao_Paulo','yyyy-MM-dd') : '',
-        status:         row[COL.status]       || '',
-        etapaAtual:     etapaAtual,
-        etapaCalculada: etapaCalculada,
-      });
-    }
-
-    return resposta({ ok: true, clientes: clientes });
-  } catch(err) {
-    return resposta({ ok: false, erro: err.message });
-  }
+    const obj = JSON.parse(saved);
+    if (obj.data !== HOJE_STR) return null; // virou o dia, ignora
+    return new Set(obj.ids);
+  } catch(e) { return null; }
 }
 
-function doPost(e) {
+function salvarCacheCiclo(ids) {
+  localStorage.setItem('cs_ciclo_cache', JSON.stringify({ data: HOJE_STR, ids: [...ids] }));
+}
+document.getElementById('hero-greeting').textContent = hora<12?'Bom dia!':hora<18?'Boa tarde!':'Boa noite!';
+document.getElementById('header-date').textContent =
+  hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+
+async function carregarClientes() {
+  document.getElementById('loading').classList.remove('hide');
+  if (!API_URL) { CLIENTES = dadosDemo(); finalizarCarga(); return; }
   try {
-    const body = JSON.parse(e.postData.contents);
-    const ss   = SpreadsheetApp.getActiveSpreadsheet();
-
-    let abaLog = ss.getSheetByName('CS_LOG');
-    if (!abaLog) {
-      abaLog = ss.insertSheet('CS_LOG');
-      abaLog.appendRow(['DATA','CLIENTE_ID','CLIENTE_NOME','CONSULTORA','ETAPA','ACAO','DETALHE']);
-    }
-    abaLog.appendRow([
-      new Date(),
-      body.clienteId   || '',
-      body.clienteNome || '',
-      body.consultora  || '',
-      body.etapa       || '',
-      body.acao        || '',
-      body.detalhe     || '',
-    ]);
-
-    if (body.acao === 'CONCLUIU' && body.rowIndex && body.novaEtapa) {
-      const aba = ss.getSheetByName(ABA_NOME);
-      aba.getRange(body.rowIndex, 21).setValue(body.novaEtapa);
-    }
-
-    return resposta({ ok: true });
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.erro);
+    CLIENTES = data.clientes.map(c => ({
+      ...c,
+      etapa: c.etapaAtual || calcEtapaEsperada(c.dataInicio, c.dataFim),
+      checks: progressoLocal[c.id]?.checks || {},
+      nok:    progressoLocal[c.id]?.nok    || [],
+      concluida: false,
+    }));
+    const consultoras = [...new Set(CLIENTES.map(c=>c.consultora).filter(Boolean))].sort();
+    const sel = document.getElementById('sel-consultora');
+    sel.innerHTML = '<option value="all">Todas as consultoras</option>';
+    consultoras.forEach(n => {
+      const o = document.createElement('option');
+      o.value=n; o.textContent=n.charAt(0).toUpperCase()+n.slice(1); sel.appendChild(o);
+    });
+    finalizarCarga();
   } catch(err) {
-    return resposta({ ok: false, erro: err.message });
+    CLIENTES = dadosDemo(); finalizarCarga();
+    console.warn('Erro:', err.message);
   }
 }
 
-// ─── RESUMO DIÁRIO 17h30 ─────────────────────────────────────────────────────
-function enviarResumo() {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const aba   = ss.getSheetByName(ABA_NOME);
-  const dados = aba.getDataRange().getValues();
-  const hoje  = new Date();
+function finalizarCarga() {
+  document.getElementById('loading').classList.add('hide');
 
-  const consultoras = ['karina', 'kaueryn', 'taina'];
-  const resumo = {};
-  consultoras.forEach(c => resumo[c] = { total: 0, finalizados: 0, atrasados: 0 });
-
-  const gnpsVistos = new Set();
-
-  for (let i = 1; i < dados.length; i++) {
-    const row = dados[i];
-    if (!row[COL.razaoSocial]) continue;
-    if (String(row[COL.status]).toLowerCase().trim() !== 'vigente') continue;
-
-    const gnp = String(row[COL.gnp]).trim();
-    if (gnp && gnpsVistos.has(gnp)) continue;
-    if (gnp) gnpsVistos.add(gnp);
-
-    const consultora = normalizar(String(row[COL.consultoraCS] || ''));
-    if (resumo[consultora] === undefined) continue;
-
-    const dataInicio = row[COL.dataInicio] ? new Date(row[COL.dataInicio]) : null;
-    const dataFim    = row[COL.dataFim]    ? new Date(row[COL.dataFim])    : null;
-    if (!dataInicio) continue;
-
-    const etapaCalculada = calcEtapaEsperada(
-      Utilities.formatDate(dataInicio,'America/Sao_Paulo','yyyy-MM-dd'),
-      dataFim ? Utilities.formatDate(dataFim,'America/Sao_Paulo','yyyy-MM-dd') : null
-    );
-    const etapaSalva = row[COL.etapaAtualCS] ? parseInt(row[COL.etapaAtualCS]) : null;
-    const etapaAtual = etapaSalva || etapaCalculada;
-
-    const noHoje   = etapaAtual === etapaCalculada;
-    const atrasado = etapaSalva && etapaSalva < etapaCalculada;
-
-    if (noHoje || atrasado) resumo[consultora].total++;
-    if (atrasado) resumo[consultora].atrasados++;
+  // Monta ou restaura cache do ciclo do dia
+  cacheCicloHoje = getCacheCiclo();
+  if (!cacheCicloHoje) {
+    // Primeira abertura do dia — calcula e salva
+    const ids = CLIENTES.filter(estaNoHojeReal).map(c => c.id);
+    salvarCacheCiclo(ids);
+    cacheCicloHoje = new Set(ids);
   }
 
-  let abaLog = ss.getSheetByName('CS_LOG');
-  if (abaLog) {
-    const logs = abaLog.getDataRange().getValues();
-    const hojeStr = Utilities.formatDate(hoje, 'America/Sao_Paulo', 'dd/MM/yyyy');
-    for (let i = 1; i < logs.length; i++) {
-      try {
-        const dataLog = Utilities.formatDate(new Date(logs[i][0]), 'America/Sao_Paulo', 'dd/MM/yyyy');
-        if (dataLog !== hojeStr) continue;
-        const c = normalizar(String(logs[i][3] || ''));
-        if (logs[i][5] === 'CONCLUIU' && resumo[c] !== undefined) resumo[c].finalizados++;
-      } catch(e) { continue; }
+  montarTabs(); renderLista();
+}
+
+function salvarLocal() {
+  const obj = {};
+  CLIENTES.forEach(c => { obj[c.id]={checks:c.checks,nok:c.nok}; });
+  localStorage.setItem('cs_progresso', JSON.stringify(obj));
+}
+
+// ─── FILTROS ─────────────────────────────────────────────────────────────────
+function montarTabs() {
+  const tabs = document.getElementById('etapas-tabs');
+  tabs.innerHTML = '<button class="tab-btn active" onclick="filtrarEtapa(\'all\',this)">Todas</button>';
+  Object.entries(ETAPAS).forEach(([k,v]) => {
+    const b = document.createElement('button');
+    b.className='tab-btn'; b.textContent=`${k} · ${v.nome}`;
+    b.onclick=function(){filtrarEtapa(k,this);}; tabs.appendChild(b);
+  });
+}
+function filtrarEtapa(e,btn) {
+  etapaFiltro=e;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); renderLista();
+}
+function aplicarFiltros() {
+  consultFiltro=document.getElementById('sel-consultora').value;
+  viewFiltro=document.getElementById('sel-view').value;
+  searchTerm=document.getElementById('search-input').value.toLowerCase().trim();
+  renderLista();
+}
+function clientesFiltrados() {
+  return CLIENTES.filter(c => {
+    if (consultFiltro!=='all' && c.consultora!==consultFiltro) return false;
+    if (etapaFiltro!=='all' && String(c.etapa)!==etapaFiltro) return false;
+    if (searchTerm && !c.nome.toLowerCase().includes(searchTerm)) return false;
+    if (viewFiltro==='hoje' && !estaNoHoje(c) && !estaAtrasado(c)) return false;
+    if (viewFiltro==='atrasados' && !estaAtrasado(c)) return false;
+    return true;
+  });
+}
+
+// ─── BOLINHAS ────────────────────────────────────────────────────────────────
+function renderDots(c) {
+  const etapaEsp = calcEtapaEsperada(c.dataInicio, c.dataFim);
+  const atrasado = estaAtrasado(c);
+  return Object.keys(ETAPAS).map(k => {
+    const n = parseInt(k);
+    let cls, title;
+    if (n < c.etapa) {
+      cls = 'concluida'; title = `Etapa ${n} concluída`;
+    } else if (n === c.etapa) {
+      if (atrasado) { cls='atrasada'; title=`Etapa ${n} em atraso`; }
+      else { cls='atual'; title=`Etapa ${n} atual`; }
+    } else {
+      cls = 'futura'; title = `Etapa ${n} futura`;
     }
+    return `<div class="etapa-dot ${cls}" title="${title}">${n}</div>`;
+  }).join('') + `<span class="etapa-dot-label">${ETAPAS[c.etapa]?.nome||''}</span>`;
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function renderLista() {
+  const filtrados = clientesFiltrados();
+  const todos = CLIENTES.filter(c=>consultFiltro==='all'||c.consultora===consultFiltro);
+  const nHoje = todos.filter(estaNoHoje).length;
+  const nAtr  = todos.filter(estaAtrasado).length;
+
+  document.getElementById('hc-hoje').textContent  = nHoje;
+  document.getElementById('hc-total').textContent = todos.length;
+  document.getElementById('hc-atr').textContent   = nAtr;
+  document.getElementById('hero-sub').textContent =
+    `${nHoje} cliente${nHoje!==1?'s':''} no ciclo hoje · ${hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})}`;
+
+  const atrasados = todos.filter(estaAtrasado);
+  const banner = document.getElementById('atraso-banner');
+  if (atrasados.length) {
+    banner.classList.add('show');
+    document.getElementById('atraso-list').innerHTML = atrasados.map(c=>{
+      const esp = calcEtapaEsperada(c.dataInicio,c.dataFim);
+      const n = esp - c.etapa;
+      return `<div class="atraso-item"><i class="ti ti-clock-exclamation"></i>
+        <strong>${c.nome}</strong> — etapa ${c.etapa} · deveria estar na ${esp} · ${n} ciclo${n>1?'s':''} em atraso
+      </div>`;
+    }).join('');
+  } else banner.classList.remove('show');
+
+  const lista = document.getElementById('lista');
+  if (!filtrados.length) {
+    lista.innerHTML=`<div class="empty"><i class="ti ti-mood-empty"></i><p>Nenhum cliente encontrado.</p></div>`;
+    return;
   }
 
-  const dataFmt = hoje.toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'long'});
-  let corpo = `
-    <div style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto">
-      <div style="background:#1B2F5E;padding:20px 24px;border-radius:8px 8px 0 0">
-        <h2 style="color:white;margin:0;font-size:18px">GOVPLAN · CS · Resumo do Dia</h2>
-        <p style="color:#a8c0f0;margin:4px 0 0;font-size:13px">${dataFmt}</p>
+  lista.innerHTML = filtrados.map(c => {
+    const et = ETAPAS[c.etapa]||ETAPAS[1];
+    const ep = Math.min(c.etapa,9);
+    const sigla = c.nome.split(' ').slice(0,2).map(p=>p[0]||'').join('').toUpperCase();
+    const total = et.itens.length;
+    const feitos = Object.values(c.checks).filter(Boolean).length;
+    const pct = total>0?Math.round(feitos/total*100):0;
+    const isOpen = abertos[c.id];
+    const atrasado = estaAtrasado(c);
+    const noHoje = estaNoHoje(c);
+    const df = diasParaFimContrato(c);
+    const dataIniFmt = c.dataInicio ? new Date(c.dataInicio+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    const dataFimFmt = c.dataFim ? new Date(c.dataFim+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+
+    let dfHtml = '';
+    if (df !== null) {
+      const cls = df<=30?'urgente':df<=60?'atencao':'';
+      dfHtml = `<div class="dias-fim ${cls}"><i class="ti ti-calendar-event" style="font-size:11px"></i> Vence em ${df} dias (${dataFimFmt})</div>`;
+    }
+
+    const cardClass = `cliente-card ${atrasado&&!c.concluidaHoje?'atrasado':'ep-'+ep}${c.concluida||c.concluidaHoje?' concluido-hoje':''}${c.concluida?' concluido':''}` ;
+    const statusBadge = atrasado?`<span class="badge-atr">⚠ Em atraso</span>`:noHoje?`<span class="badge-hoje">● Ciclo hoje</span>`:'';
+    const nokBadge = c.nok.length&&!c.concluida?`<span class="badge-nok">Pendência</span>`:'';
+    const okBadge = (c.concluida||c.concluidaHoje)?`<span class="badge-ok">✓ Concluído hoje</span>`:'';
+
+    return `
+    <div class="${cardClass}" id="card-${c.id}">
+      <div class="card-header" onclick="toggleCard(${c.id})">
+        <div class="avatar av-${atrasado?'atr':ep}">${sigla}</div>
+        <div class="card-info">
+          <div class="card-nome">${c.nome}</div>
+          <div class="card-meta">
+            <span>${feitos}/${total} itens (${pct}%)</span>
+            <span class="meta-sep">·</span>
+            <span>${c.consultora.charAt(0).toUpperCase()+c.consultora.slice(1)}</span>
+            ${statusBadge||nokBadge||okBadge?'<span class="meta-sep">·</span>':''}
+            ${statusBadge}${nokBadge}${okBadge}
+          </div>
+          <div class="etapa-dots">${renderDots(c)}</div>
+          ${dfHtml}
+        </div>
+        <div class="card-right">
+          <span class="etapa-pill ep-pill-${ep}">${c.etapa} · ${et.nome}</span>
+          <i class="ti ti-chevron-down chevron ${isOpen?'open':''}"></i>
+        </div>
       </div>
-      <div style="background:#F7F8FA;padding:20px 24px;border-radius:0 0 8px 8px;border:1px solid #E4E7EC">
-        <table style="width:100%;border-collapse:collapse">
-          <tr style="background:#E4E7EC">
-            <th style="padding:10px 12px;text-align:left;font-size:13px">Consultora</th>
-            <th style="padding:10px 12px;text-align:center;font-size:13px">No ciclo hoje</th>
-            <th style="padding:10px 12px;text-align:center;font-size:13px">Finalizados</th>
-            <th style="padding:10px 12px;text-align:center;font-size:13px">Em atraso</th>
-          </tr>`;
-
-  consultoras.forEach((c, idx) => {
-    const r = resumo[c];
-    const bg = idx % 2 === 0 ? '#ffffff' : '#F7F8FA';
-    const nome = c.charAt(0).toUpperCase() + c.slice(1);
-    corpo += `
-      <tr style="background:${bg}">
-        <td style="padding:10px 12px;font-size:13px;font-weight:500">${nome}</td>
-        <td style="padding:10px 12px;font-size:13px;text-align:center">${r.total}</td>
-        <td style="padding:10px 12px;font-size:13px;text-align:center;color:#15803D;font-weight:500">${r.finalizados}</td>
-        <td style="padding:10px 12px;font-size:13px;text-align:center;color:${r.atrasados>0?'#B91C1C':'#15803D'};font-weight:500">${r.atrasados}</td>
-      </tr>`;
-  });
-
-  corpo += `</table>
-        <p style="font-size:12px;color:#6B7280;margin-top:16px">Gerado automaticamente · CS Ciclo do Dia · Govplan</p>
-      </div></div>`;
-
-  GmailApp.sendEmail(
-    'franciele@govplan.com.br,liliane@govplan.com.br',
-    `CS · Resumo do Dia — ${Utilities.formatDate(hoje,'America/Sao_Paulo','dd/MM/yyyy')}`,
-    '', { htmlBody: corpo }
-  );
-}
-
-// ─── E-MAIL ATRASADOS (a cada 15 dias às 9h) ─────────────────────────────────
-function enviarAtrasados() {
-  const hoje = new Date();
-  const dia  = hoje.getDate();
-
-  // Só envia nos dias 1 e 16 de cada mês
-  if (dia !== 1 && dia !== 16) return;
-
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const aba   = ss.getSheetByName(ABA_NOME);
-  const dados = aba.getDataRange().getValues();
-
-  // Agrupa atrasados por consultora
-  const atrasadosPor = {};
-  const gnpsVistos = new Set();
-
-  for (let i = 1; i < dados.length; i++) {
-    const row = dados[i];
-    if (!row[COL.razaoSocial]) continue;
-    if (String(row[COL.status]).toLowerCase().trim() !== 'vigente') continue;
-
-    const gnp = String(row[COL.gnp]).trim();
-    if (gnp && gnpsVistos.has(gnp)) continue;
-    if (gnp) gnpsVistos.add(gnp);
-
-    const consultora = normalizar(String(row[COL.consultoraCS] || ''));
-    const dataInicio = row[COL.dataInicio] ? new Date(row[COL.dataInicio]) : null;
-    const dataFim    = row[COL.dataFim]    ? new Date(row[COL.dataFim])    : null;
-    if (!dataInicio) continue;
-
-    const etapaCalculada = calcEtapaEsperada(
-      Utilities.formatDate(dataInicio,'America/Sao_Paulo','yyyy-MM-dd'),
-      dataFim ? Utilities.formatDate(dataFim,'America/Sao_Paulo','yyyy-MM-dd') : null
-    );
-    const etapaSalva = row[COL.etapaAtualCS] ? parseInt(row[COL.etapaAtualCS]) : null;
-
-    const atrasado = etapaSalva && etapaSalva < etapaCalculada;
-    if (!atrasado) continue;
-
-    const ciclosAtraso = etapaCalculada - etapaSalva;
-    if (!atrasadosPor[consultora]) atrasadosPor[consultora] = [];
-    atrasadosPor[consultora].push({
-      nome:         row[COL.razaoSocial] || '',
-      gnp:          gnp,
-      etapaAtual:   etapaSalva,
-      etapaDeveria: etapaCalculada,
-      ciclosAtraso: ciclosAtraso,
-      dataFim:      dataFim ? Utilities.formatDate(dataFim,'America/Sao_Paulo','dd/MM/yyyy') : '—',
-    });
-  }
-
-  const totalAtrasados = Object.values(atrasadosPor).reduce((s,a)=>s+a.length,0);
-  if (totalAtrasados === 0) return; // nada em atraso, não envia
-
-  const dataFmt = hoje.toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'long'});
-
-  let corpo = `
-    <div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto">
-      <div style="background:#B91C1C;padding:20px 24px;border-radius:8px 8px 0 0">
-        <h2 style="color:white;margin:0;font-size:18px">⚠ GOVPLAN · CS · Clientes em Atraso</h2>
-        <p style="color:#fecaca;margin:4px 0 0;font-size:13px">${dataFmt} · ${totalAtrasados} cliente${totalAtrasados>1?'s':''} em atraso</p>
+      <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+      <div class="card-body ${isOpen?'open':''}">
+        <div class="cl-section">
+          <div class="cl-section-title"><i class="ti ti-checklist"></i> Checklist · ${et.nome}</div>
+          ${et.itens.map((item,i)=>`
+          <div class="cl-item">
+            <div class="cl-checkbox ${c.checks[i]?'checked':''}" onclick="toggleCheck(${c.id},${i})"></div>
+            <span class="cl-label ${c.checks[i]?'done':''}" onclick="toggleCheck(${c.id},${i})">${item}</span>
+          </div>`).join('')}
+          ${c.nok.length?`<div class="nok-historico">
+            <div class="nok-historico-title"><i class="ti ti-alert-circle" style="font-size:13px"></i> Pendências registradas</div>
+            ${c.nok.map(n=>`<div class="nok-entry"><strong>${n.data}</strong> — ${n.motivo}</div>`).join('')}
+          </div>`:''}
+        </div>
+        <div class="card-footer">
+          <span class="footer-info">Início: ${dataIniFmt} · Fim: ${dataFimFmt}${c.gnp?' · GNP '+c.gnp:''}</span>
+          <button class="btn btn-crm" onclick="abrirCrm(${c.id})"><i class="ti ti-external-link"></i> GNP</button>
+          <button class="btn btn-nok" onclick="abrirModalNok(${c.id})"><i class="ti ti-x"></i> Não concluído</button>
+          <button class="btn btn-ok" onclick="concluirEtapa(${c.id})"><i class="ti ti-check"></i> Concluir etapa</button>
+        </div>
       </div>
-      <div style="background:#FEF2F2;padding:20px 24px;border-radius:0 0 8px 8px;border:1px solid #FECACA">`;
-
-  const consultoras = ['karina', 'kaueryn', 'taina'];
-  consultoras.forEach(c => {
-    const lista = atrasadosPor[c];
-    if (!lista || lista.length === 0) return;
-    const nomeC = c.charAt(0).toUpperCase() + c.slice(1);
-
-    corpo += `
-        <div style="margin-bottom:20px">
-          <h3 style="font-size:14px;font-weight:700;color:#7B1D1D;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid #FECACA">
-            ${nomeC} — ${lista.length} cliente${lista.length>1?'s':''} em atraso
-          </h3>
-          <table style="width:100%;border-collapse:collapse">
-            <tr style="background:#FECACA">
-              <th style="padding:8px 10px;text-align:left;font-size:12px;color:#7B1D1D">Cliente</th>
-              <th style="padding:8px 10px;text-align:center;font-size:12px;color:#7B1D1D">Etapa atual</th>
-              <th style="padding:8px 10px;text-align:center;font-size:12px;color:#7B1D1D">Deveria estar</th>
-              <th style="padding:8px 10px;text-align:center;font-size:12px;color:#7B1D1D">Ciclos atraso</th>
-              <th style="padding:8px 10px;text-align:center;font-size:12px;color:#7B1D1D">Venc. contrato</th>
-            </tr>`;
-
-    lista.forEach((cl, idx) => {
-      const bg = idx % 2 === 0 ? '#ffffff' : '#FEF2F2';
-      corpo += `
-            <tr style="background:${bg}">
-              <td style="padding:8px 10px;font-size:12px;font-weight:500;color:#1B2F5E">${cl.nome}${cl.gnp?' <span style="color:#94A3B8">(GNP ${cl.gnp})</span>':''}</td>
-              <td style="padding:8px 10px;font-size:12px;text-align:center;color:#B91C1C;font-weight:600">${cl.etapaAtual} · ${ETAPAS_NOMES[cl.etapaAtual]||''}</td>
-              <td style="padding:8px 10px;font-size:12px;text-align:center;color:#374151">${cl.etapaDeveria} · ${ETAPAS_NOMES[cl.etapaDeveria]||''}</td>
-              <td style="padding:8px 10px;font-size:12px;text-align:center;color:#B91C1C;font-weight:700">${cl.ciclosAtraso}</td>
-              <td style="padding:8px 10px;font-size:12px;text-align:center;color:#374151">${cl.dataFim}</td>
-            </tr>`;
-    });
-
-    corpo += `</table></div>`;
-  });
-
-  corpo += `
-        <p style="font-size:12px;color:#6B7280;margin-top:8px">Gerado automaticamente a cada 15 dias · CS Ciclo do Dia · Govplan</p>
-      </div></div>`;
-
-  GmailApp.sendEmail(
-    'franciele@govplan.com.br,liliane@govplan.com.br',
-    `⚠ CS · Clientes em Atraso — ${Utilities.formatDate(hoje,'America/Sao_Paulo','dd/MM/yyyy')} (${totalAtrasados} cliente${totalAtrasados>1?'s':''})`,
-    '', { htmlBody: corpo }
-  );
+    </div>`;
+  }).join('');
 }
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-function normalizar(str) {
-  return String(str).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+// ─── AÇÕES ───────────────────────────────────────────────────────────────────
+function toggleCard(id){abertos[id]=!abertos[id];renderLista();}
+function toggleCheck(cid,idx){
+  const c=CLIENTES.find(x=>x.id===cid);
+  c.checks[idx]=!c.checks[idx];
+  salvarLocal();logAction(c,'CHECK',`Item ${idx+1}: ${ETAPAS[c.etapa].itens[idx]}`);renderLista();
 }
-function resposta(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+function abrirCrm(id){
+  const c=CLIENTES.find(x=>x.id===id);
+  alert(`Abrir GNP para: ${c.nome}\nCódigo: ${c.gnp||'—'}`);
 }
+function concluirEtapa(id){
+  const c=CLIENTES.find(x=>x.id===id);
+  const et=ETAPAS[c.etapa];
+  const feitos=Object.values(c.checks).filter(Boolean).length;
+  if(feitos<et.itens.length&&!confirm(`Ainda há ${et.itens.length-feitos} item(ns) não marcados.\nDeseja concluir mesmo assim?`))return;
+  const novaEtapa=c.etapa<9?c.etapa+1:c.etapa;
+  logAction(c,'CONCLUIU',`Etapa ${c.etapa}: ${et.nome}`,novaEtapa);
+  if(c.etapa<9){c.etapa=novaEtapa;c.checks={};c.concluidaHoje=true;}
+  else c.concluida=true;
+  salvarLocal();renderLista();
+}
+function abrirModalNok(id){
+  const c=CLIENTES.find(x=>x.id===id);
+  modalClienteId=id;
+  document.getElementById('modal-nok-sub').textContent=`${c.nome} · Etapa ${c.etapa}: ${ETAPAS[c.etapa].nome}`;
+  document.getElementById('modal-nok-texto').value='';
+  document.getElementById('modal-nok').classList.add('show');
+}
+function fecharModal(){document.getElementById('modal-nok').classList.remove('show');modalClienteId=null;}
+function salvarNok(){
+  const texto=document.getElementById('modal-nok-texto').value.trim();
+  if(!texto){alert('Por favor, descreva o motivo.');return;}
+  const c=CLIENTES.find(x=>x.id===modalClienteId);
+  c.nok.push({data:hoje.toLocaleDateString('pt-BR'),motivo:texto});
+  logAction(c,'NAO_CONCLUIU',texto);
+  salvarLocal();fecharModal();renderLista();
+}
+document.getElementById('modal-nok').addEventListener('click',function(e){if(e.target===this)fecharModal();});
+async function logAction(c,acao,detalhe,novaEtapa){
+  if(!API_URL)return;
+  try{
+    await fetch(API_URL,{method:'POST',body:JSON.stringify({
+      clienteId:c.id,rowIndex:c.rowIndex,clienteNome:c.nome,
+      consultora:c.consultora,etapa:c.etapa,novaEtapa:novaEtapa||null,acao,detalhe
+    })});
+  }catch(e){}
+}
+
+// ─── DEMO ────────────────────────────────────────────────────────────────────
+function dadosDemo(){
+  function d(n){const x=new Date(hoje);x.setDate(x.getDate()+n);return x.toISOString().split('T')[0];}
+  function di(n){const x=new Date(hoje);x.setDate(x.getDate()-n);return x.toISOString().split('T')[0];}
+  return [
+    {id:1,rowIndex:2,gnp:'001',nome:'Prefeitura de Maringá',consultora:'taina',dataInicio:di(2),dataFim:d(363),checks:{},nok:[],concluida:false,etapa:1},
+    {id:2,rowIndex:3,gnp:'002',nome:'Câmara Municipal Londrina',consultora:'taina',dataInicio:di(32),dataFim:d(333),checks:{},nok:[],concluida:false,etapa:2},
+    {id:3,rowIndex:4,gnp:'003',nome:'SAAE Apucarana',consultora:'karina',dataInicio:di(200),dataFim:d(115),checks:{},nok:[],concluida:false,etapa:6},
+    {id:4,rowIndex:5,gnp:'004',nome:'Fórum Regional Norte',consultora:'kaueryn',dataInicio:di(250),dataFim:d(14),checks:{},nok:[],concluida:false,etapa:9},
+    {id:5,rowIndex:6,gnp:'005',nome:'IPPUL Londrina',consultora:'taina',dataInicio:di(100),dataFim:d(63),checks:{},nok:[],concluida:false,etapa:4},
+  ];
+}
+
+carregarClientes();
+</script>
+</body>
+</html>
