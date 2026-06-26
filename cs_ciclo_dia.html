@@ -398,9 +398,42 @@ function estaNoHoje(c) {
 }
 
 function estaAtrasado(c) {
-  if (c.concluida) return false;
+  if (c.concluida || c.concluidaHoje) return false;
+
+  // 1. Se etapa salva está atrás da calculada → atrasado
   const etapaEsp = calcEtapaEsperada(c.dataInicio, c.dataFim);
-  return c.etapa < etapaEsp;
+  if (c.etapa < etapaEsp) return true;
+
+  // 2. Verifica se estava no ciclo de ontem ou antes (desde início do sistema)
+  // e não tem nenhum registro no CS_LOG
+  const ontem = new Date(hoje);
+  ontem.setDate(ontem.getDate() - 1);
+  const ontemStr = ontem.toISOString().split('T')[0];
+
+  // Só verifica se sistema já está ativo
+  if (ontemStr < DATA_INICIO_SISTEMA) return false;
+
+  // Verifica os últimos 7 dias (ignora fins de semana)
+  const cacheSalvo = localStorage.getItem('cs_ciclo_cache');
+  if (!cacheSalvo) return false;
+  try {
+    const obj = JSON.parse(cacheSalvo);
+    // Se estava no ciclo de ontem (ou dia útil anterior)
+    if (obj.ids.includes(c.id)) {
+      const diaCache = new Date(obj.data + 'T12:00:00');
+      const diaSemana = diaCache.getDay(); // 0=dom, 6=sab
+      // Ignora fins de semana — não cobra atraso
+      if (diaSemana === 0 || diaSemana === 6) return false;
+      // Só cobra se o dia do cache foi dia útil e já passou
+      if (obj.data < HOJE_STR && obj.data >= DATA_INICIO_SISTEMA) {
+        const regs = REGISTROS[String(c.id)] || [];
+        const tevRegistro = regs.some(r => r.data === obj.data);
+        if (!tevRegistro) return true;
+      }
+    }
+  } catch(e) {}
+
+  return false;
 }
 
 function diasParaFimContrato(c) {
@@ -417,6 +450,8 @@ const progressoLocal = JSON.parse(localStorage.getItem('cs_progresso') || '{}');
 let modalClienteId = null;
 
 const hora = hoje.getHours();
+const DATA_INICIO_SISTEMA = '2026-06-26'; // data de início do uso do sistema
+let REGISTROS = {}; // histórico do CS_LOG vindo da API
 
 // ─── CACHE DO CICLO DO DIA ───────────────────────────────────────────────────
 // Guarda quais IDs estavam no ciclo quando a página abriu hoje
@@ -448,6 +483,8 @@ async function carregarClientes() {
     const res = await fetch(API_URL);
     const data = await res.json();
     if (!data.ok) throw new Error(data.erro);
+    REGISTROS = data.registros || {};
+
     CLIENTES = data.clientes.map(c => ({
       ...c,
       etapa: c.etapaAtual || calcEtapaEsperada(c.dataInicio, c.dataFim),
