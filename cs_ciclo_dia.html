@@ -404,34 +404,20 @@ function estaAtrasado(c) {
   const etapaEsp = calcEtapaEsperada(c.dataInicio, c.dataFim);
   if (c.etapa < etapaEsp) return true;
 
-  // 2. Verifica se estava no ciclo de ontem ou antes (desde início do sistema)
-  // e não tem nenhum registro no CS_LOG
-  const ontem = new Date(hoje);
-  ontem.setDate(ontem.getDate() - 1);
-  const ontemStr = ontem.toISOString().split('T')[0];
+  // 2. Verifica histórico da planilha — dias úteis passados sem registro
+  const regs = REGISTROS[String(c.id)] || [];
+  const regsDatas = new Set(regs);
 
-  // Só verifica se sistema já está ativo
-  if (ontemStr < DATA_INICIO_SISTEMA) return false;
-
-  // Verifica os últimos 7 dias (ignora fins de semana)
-  const cacheSalvo = localStorage.getItem('cs_ciclo_cache');
-  if (!cacheSalvo) return false;
-  try {
-    const obj = JSON.parse(cacheSalvo);
-    // Se estava no ciclo de ontem (ou dia útil anterior)
-    if (obj.ids.includes(c.id)) {
-      const diaCache = new Date(obj.data + 'T12:00:00');
-      const diaSemana = diaCache.getDay(); // 0=dom, 6=sab
-      // Ignora fins de semana — não cobra atraso
-      if (diaSemana === 0 || diaSemana === 6) return false;
-      // Só cobra se o dia do cache foi dia útil e já passou
-      if (obj.data < HOJE_STR && obj.data >= DATA_INICIO_SISTEMA) {
-        const regs = REGISTROS[String(c.id)] || [];
-        const tevRegistro = regs.some(r => r.data === obj.data);
-        if (!tevRegistro) return true;
-      }
+  for (const dataStr in HISTORICO) {
+    if (dataStr >= HOJE_STR) continue;
+    if (dataStr < DATA_INICIO_SISTEMA) continue;
+    const diaRef = new Date(dataStr + 'T12:00:00');
+    const diaSemana = diaRef.getDay();
+    if (diaSemana === 0 || diaSemana === 6) continue;
+    if (HISTORICO[dataStr].includes(c.id) && !regsDatas.has(dataStr)) {
+      return true;
     }
-  } catch(e) {}
+  }
 
   return false;
 }
@@ -450,8 +436,9 @@ const progressoLocal = JSON.parse(localStorage.getItem('cs_progresso') || '{}');
 let modalClienteId = null;
 
 const hora = hoje.getHours();
-const DATA_INICIO_SISTEMA = '2026-06-26'; // data de início do uso do sistema
-let REGISTROS = {}; // histórico do CS_LOG vindo da API
+const DATA_INICIO_SISTEMA = '2026-06-26';
+let REGISTROS = {}; // registros do CS_LOG
+let HISTORICO = {}; // histórico do ciclo por dia (vindo da planilha)
 
 // ─── CACHE DO CICLO DO DIA ───────────────────────────────────────────────────
 // Guarda quais IDs estavam no ciclo quando a página abriu hoje
@@ -459,18 +446,32 @@ let REGISTROS = {}; // histórico do CS_LOG vindo da API
 const HOJE_STR = hoje.toISOString().split('T')[0]; // "2026-06-25"
 let cacheCicloHoje = null;
 
+// Cache acumulado: { "2026-06-27": [ids...], "2026-06-30": [ids...], ... }
+function getCacheHistorico() {
+  const saved = localStorage.getItem('cs_ciclo_historico');
+  if (!saved) return {};
+  try { return JSON.parse(saved); } catch(e) { return {}; }
+}
+
+function salvarCacheHistorico(historico) {
+  // Mantém só os últimos 30 dias pra não crescer infinito
+  const datas = Object.keys(historico).sort();
+  if (datas.length > 30) {
+    datas.slice(0, datas.length - 30).forEach(d => delete historico[d]);
+  }
+  localStorage.setItem('cs_ciclo_historico', JSON.stringify(historico));
+}
+
 function getCacheCiclo() {
-  const saved = localStorage.getItem('cs_ciclo_cache');
-  if (!saved) return null;
-  try {
-    const obj = JSON.parse(saved);
-    if (obj.data !== HOJE_STR) return null; // virou o dia, ignora
-    return new Set(obj.ids);
-  } catch(e) { return null; }
+  const historico = getCacheHistorico();
+  if (!historico[HOJE_STR]) return null;
+  return new Set(historico[HOJE_STR]);
 }
 
 function salvarCacheCiclo(ids) {
-  localStorage.setItem('cs_ciclo_cache', JSON.stringify({ data: HOJE_STR, ids: [...ids] }));
+  const historico = getCacheHistorico();
+  historico[HOJE_STR] = [...ids];
+  salvarCacheHistorico(historico);
 }
 document.getElementById('hero-greeting').textContent = hora<12?'Bom dia!':hora<18?'Boa tarde!':'Boa noite!';
 document.getElementById('header-date').textContent =
@@ -484,6 +485,7 @@ async function carregarClientes() {
     const data = await res.json();
     if (!data.ok) throw new Error(data.erro);
     REGISTROS = data.registros || {};
+    HISTORICO = data.historico || {};
 
     CLIENTES = data.clientes.map(c => ({
       ...c,
