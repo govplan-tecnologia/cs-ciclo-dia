@@ -388,11 +388,13 @@ function estaNoHoje(c) {
   return estaNoHojeReal(c);
 }
 
-// ATRASADO = estava no ciclo de um dia útil passado E não tem CONCLUIU naquele dia
+// ATRASADO = o cliente esteve no ciclo de um dia útil passado e não existe
+// registro de "CONCLUIU" para aquele dia — ou seja, ficou em branco (não fez
+// nada) ou registrou "Não concluído" (impedimento). Isso é diferente de estar
+// só "pendente hoje" (ainda dentro do dia atual, sem ter clicado em nada).
 function estaAtrasado(c) {
   if (c.concluida || c.concluidaHoje || NAO_RENOVA.has(c.id)) return false;
 
-  // Usa histórico do servidor (planilha) como fonte principal
   const fonte = Object.keys(HISTORICO).length > 0 ? HISTORICO : getCacheHistorico();
   const regsDatas = new Set(REGISTROS[String(c.id)] || []);
 
@@ -405,6 +407,27 @@ function estaAtrasado(c) {
     if (fonte[dataStr].includes(c.id) && !regsDatas.has(dataStr)) return true;
   }
   return false;
+}
+
+// Lista as datas (dias úteis) em que o cliente esteve no ciclo e não concluiu
+function diasSemConclusao(c) {
+  const fonte = Object.keys(HISTORICO).length > 0 ? HISTORICO : getCacheHistorico();
+  const regsDatas = new Set(REGISTROS[String(c.id)] || []);
+  const dias = [];
+  for (const dataStr in fonte) {
+    if (dataStr >= HOJE_STR || dataStr < DATA_INICIO_SISTEMA) continue;
+    const diaRef = new Date(dataStr + 'T12:00:00');
+    if (diaRef.getDay() === 0 || diaRef.getDay() === 6) continue;
+    if (fonte[dataStr].includes(c.id) && !regsDatas.has(dataStr)) {
+      dias.push(dataStr);
+    }
+  }
+  return dias.sort();
+}
+
+function ciclosAtraso(c) {
+  const etapaEsp = calcEtapaEsperada(c.dataInicio, c.dataFim);
+  return Math.max(0, etapaEsp - c.etapa);
 }
 
 function diasParaFimContrato(c) {
@@ -532,21 +555,14 @@ function renderLista() {
   const banner = document.getElementById('atraso-banner');
   if (atrasados.length) {
     banner.classList.add('show');
-    const fonte = Object.keys(HISTORICO).length > 0 ? HISTORICO : getCacheHistorico();
     document.getElementById('atraso-list').innerHTML = atrasados.map(c=>{
-      const regsDatas = new Set(REGISTROS[String(c.id)] || []);
-      const diasSem = [];
-      for (const dataStr in fonte) {
-        if (dataStr >= HOJE_STR || dataStr < DATA_INICIO_SISTEMA) continue;
-        const diaRef = new Date(dataStr+'T12:00:00');
-        if (diaRef.getDay()===0||diaRef.getDay()===6) continue;
-        if (fonte[dataStr].includes(c.id) && !regsDatas.has(dataStr)) {
-          diasSem.push(new Date(dataStr+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'}));
-        }
-      }
+      const dias = diasSemConclusao(c).map(dataStr =>
+        new Date(dataStr + 'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})
+      );
       return `<div class="atraso-item"><i class="ti ti-clock-exclamation"></i>
         <strong>${c.nome}</strong> · ${c.consultora.charAt(0).toUpperCase()+c.consultora.slice(1)}
-        ${diasSem.length?'· Sem atendimento: '+diasSem.join(', '):''}
+        · etapa ${c.etapa} (${ETAPAS[c.etapa].nome})
+        ${dias.length?'· Sem conclusão em: '+dias.join(', '):''}
       </div>`;
     }).join('');
   } else banner.classList.remove('show');
