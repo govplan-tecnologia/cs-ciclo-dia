@@ -312,33 +312,6 @@ document.getElementById('hero-greeting').textContent = hora<12?'Bom dia!':hora<1
 document.getElementById('header-date').textContent =
   hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
 
-// ─── CACHE DO CICLO DO DIA ───────────────────────────────────────────────────
-let cacheCicloHoje = null;
-
-function getCacheHistorico() {
-  const saved = localStorage.getItem('cs_ciclo_historico');
-  if (!saved) return {};
-  try { return JSON.parse(saved); } catch(e) { return {}; }
-}
-
-function salvarCacheHistorico(hist) {
-  const datas = Object.keys(hist).sort();
-  if (datas.length > 30) datas.slice(0, datas.length-30).forEach(d => delete hist[d]);
-  localStorage.setItem('cs_ciclo_historico', JSON.stringify(hist));
-}
-
-function getCacheCiclo() {
-  const hist = getCacheHistorico();
-  if (!hist[HOJE_STR]) return null;
-  return new Set(hist[HOJE_STR]);
-}
-
-function salvarCacheCiclo(ids) {
-  const hist = getCacheHistorico();
-  hist[HOJE_STR] = [...ids];
-  salvarCacheHistorico(hist);
-}
-
 // ─── LÓGICA DE ETAPA ─────────────────────────────────────────────────────────
 function calcEtapaEsperada(dataInicio, dataFim) {
   if (!dataInicio) return 1;
@@ -383,8 +356,10 @@ function estaNoHojeReal(c) {
   return diffDias >= 0 && diffDias <= janela;
 }
 
+// Antes havia um cache local (localStorage, por navegador) que congelava o
+// resultado do dia inteiro e podia divergir dos dados reais do servidor.
+// Removido: agora sempre calcula ao vivo com base nos dados que vieram da API.
 function estaNoHoje(c) {
-  if (cacheCicloHoje) return cacheCicloHoje.has(c.id);
   return estaNoHojeReal(c);
 }
 
@@ -401,16 +376,15 @@ function ultimaConclusao(c) {
 function estaAtrasado(c) {
   if (c.concluida || c.concluidaHoje || NAO_RENOVA.has(c.id)) return false;
 
-  const fonte = Object.keys(HISTORICO).length > 0 ? HISTORICO : getCacheHistorico();
   const ultima = ultimaConclusao(c); // data (string) da última vez que concluiu algo, ou null
 
-  for (const dataStr in fonte) {
+  for (const dataStr in HISTORICO) {
     if (dataStr >= HOJE_STR) continue;
     if (dataStr < DATA_INICIO_SISTEMA) continue;
     const diaRef = new Date(dataStr + 'T12:00:00');
     const diaSemana = diaRef.getDay();
     if (diaSemana === 0 || diaSemana === 6) continue;
-    if (!fonte[dataStr].includes(c.id)) continue;
+    if (!HISTORICO[dataStr].includes(c.id)) continue;
     // Esse dia só conta como atraso se NÃO houve nenhuma conclusão
     // nesse dia ou depois dele (uma conclusão "quita" o atraso acumulado até ali).
     if (!ultima || ultima < dataStr) return true;
@@ -419,14 +393,13 @@ function estaAtrasado(c) {
 }
 
 function diasSemConclusao(c) {
-  const fonte = Object.keys(HISTORICO).length > 0 ? HISTORICO : getCacheHistorico();
   const ultima = ultimaConclusao(c);
   const dias = [];
-  for (const dataStr in fonte) {
+  for (const dataStr in HISTORICO) {
     if (dataStr >= HOJE_STR || dataStr < DATA_INICIO_SISTEMA) continue;
     const diaRef = new Date(dataStr + 'T12:00:00');
     if (diaRef.getDay() === 0 || diaRef.getDay() === 6) continue;
-    if (!fonte[dataStr].includes(c.id)) continue;
+    if (!HISTORICO[dataStr].includes(c.id)) continue;
     if (!ultima || ultima < dataStr) dias.push(dataStr);
   }
   return dias.sort();
@@ -482,16 +455,6 @@ async function carregarClientes() {
 
 function finalizarCarga() {
   document.getElementById('loading').classList.add('hide');
-  cacheCicloHoje = getCacheCiclo();
-  if (!cacheCicloHoje) {
-    const ids = CLIENTES.filter(estaNoHojeReal).map(c=>c.id);
-    salvarCacheCiclo(ids);
-    cacheCicloHoje = new Set(ids);
-    // Também salva no histórico local
-    const hist = getCacheHistorico();
-    hist[HOJE_STR] = ids;
-    salvarCacheHistorico(hist);
-  }
   montarTabs(); renderLista();
 }
 
