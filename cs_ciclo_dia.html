@@ -569,7 +569,7 @@ function renderLista() {
 
     return `
     <div class="${cardClass}" id="card-${c.id}">
-      <div class="card-header" onclick="toggleCard(${c.id})">
+      <div class="card-header" onclick="toggleCard('${c.id}')">
         <div class="avatar av-${ep}">${sigla}</div>
         <div class="card-info">
           <div class="card-nome">${c.nome}</div>
@@ -594,8 +594,8 @@ function renderLista() {
           <div class="cl-section-title"><i class="ti ti-checklist"></i> Checklist · ${et.nome}</div>
           ${et.itens.map((item,i)=>`
           <div class="cl-item">
-            <div class="cl-checkbox ${c.checks[i]?'checked':''}" onclick="toggleCheck(${c.id},${i})"></div>
-            <span class="cl-label ${c.checks[i]?'done':''}" onclick="toggleCheck(${c.id},${i})">${item}</span>
+            <div class="cl-checkbox ${c.checks[i]?'checked':''}" onclick="toggleCheck('${c.id}',${i})"></div>
+            <span class="cl-label ${c.checks[i]?'done':''}" onclick="toggleCheck('${c.id}',${i})">${item}</span>
           </div>`).join('')}
           ${c.nok.length?`<div class="nok-historico">
             <div class="nok-historico-title"><i class="ti ti-alert-circle" style="font-size:13px"></i> Pendências registradas</div>
@@ -604,10 +604,10 @@ function renderLista() {
         </div>
         <div class="card-footer">
           <span class="footer-info">Início: ${dataIniFmt} · Fim: ${dataFimFmt}${c.gnp?' · GNP '+c.gnp:''}</span>
-          <button class="btn btn-crm" onclick="abrirCrm(${c.id})"><i class="ti ti-external-link"></i> GNP</button>
-          <button class="btn btn-nok" onclick="abrirModalNok(${c.id})"><i class="ti ti-x"></i> Não concluído</button>
-          <button class="btn btn-nrn" onclick="abrirModalNaoRenova(${c.id})"><i class="ti ti-ban"></i> Não renova</button>
-          <button class="btn btn-ok" onclick="concluirEtapa(${c.id})"><i class="ti ti-check"></i> Concluir etapa</button>
+          <button class="btn btn-crm" onclick="abrirCrm('${c.id}')"><i class="ti ti-external-link"></i> GNP</button>
+          <button class="btn btn-nok" onclick="abrirModalNok('${c.id}')"><i class="ti ti-x"></i> Não concluído</button>
+          <button class="btn btn-nrn" onclick="abrirModalNaoRenova('${c.id}')"><i class="ti ti-ban"></i> Não renova</button>
+          <button class="btn btn-ok" onclick="concluirEtapa('${c.id}')"><i class="ti ti-check"></i> Concluir etapa</button>
         </div>
       </div>
     </div>`;
