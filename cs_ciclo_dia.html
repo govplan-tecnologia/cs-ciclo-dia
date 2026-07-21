@@ -312,45 +312,61 @@ document.getElementById('hero-greeting').textContent = hora<12?'Bom dia!':hora<1
 document.getElementById('header-date').textContent =
   hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
 
+// ─── DISTRIBUIÇÃO DE CARGA ───────────────────────────────────────────────────
+// Mesmo hash determinístico usado no backend — garante que o frontend e o
+// e-mail calculem exatamente o mesmo dia pra cada cliente.
+function hashOffsetDias(gnpOuId, max) {
+  const str = String(gnpOuId || '');
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) % 1000000;
+  }
+  return hash % max;
+}
+
 // ─── LÓGICA DE ETAPA ─────────────────────────────────────────────────────────
-function calcEtapaEsperada(dataInicio, dataFim) {
+function calcEtapaEsperada(dataInicio, dataFim, gnp) {
   if (!dataInicio) return 1;
   const dIni = new Date(dataInicio + 'T12:00:00');
   const dFim = dataFim ? new Date(dataFim + 'T12:00:00') : null;
+  const jitter = hashOffsetDias(gnp, 5);
   const diasParaFim = dFim ? Math.floor((dFim - hoje) / 864e5) : 9999;
 
   if (dFim) {
-    if (diasParaFim <= 15)  return 9;
-    if (diasParaFim <= 30)  return 8;
-    if (diasParaFim <= 60)  return 7;
-    if (diasParaFim <= 90)  return 7;
-    if (diasParaFim <= 120) return 6;
+    if (diasParaFim <= 15 - jitter)  return 9;
+    if (diasParaFim <= 30 - jitter)  return 8;
+    if (diasParaFim <= 60 - jitter)  return 7;
+    if (diasParaFim <= 90 - jitter)  return 7;
+    if (diasParaFim <= 120 - jitter) return 6;
   }
 
-  const diasDeInicio = Math.floor((hoje - dIni) / 864e5);
+  const diasDeInicio = Math.floor((hoje - dIni) / 864e5) - jitter;
   if (diasDeInicio < 0) return 1;
   return SEQ_INICIO[Math.min(7, Math.floor(diasDeInicio/30))];
 }
 
-function dataCiclo(dataInicio, dataFim, etapa) {
+function dataCiclo(dataInicio, dataFim, etapa, gnp) {
   const dIni = new Date(dataInicio + 'T12:00:00');
   const dFim = dataFim ? new Date(dataFim + 'T12:00:00') : null;
+  const jitter = hashOffsetDias(gnp, 5);
   if (etapa <= 5 || !dFim) {
     for (let i = 0; i < 8; i++) {
       if (SEQ_INICIO[i] === etapa) {
-        const d = new Date(dIni); d.setDate(d.getDate() + i*30); return d;
+        // +1 dia: o ciclo só entra a partir do dia seguinte ao cadastro/início.
+        // +jitter: espalha clientes que caem no mesmo dia entre si.
+        const d = new Date(dIni); d.setDate(d.getDate() + i*30 + 1 + jitter); return d;
       }
     }
-    return dIni;
+    const d = new Date(dIni); d.setDate(d.getDate() + 1 + jitter); return d;
   }
   const offsets = {6:120,7:90,8:30,9:15};
-  const d = new Date(dFim); d.setDate(d.getDate() - (offsets[etapa]||30)); return d;
+  const d = new Date(dFim); d.setDate(d.getDate() - (offsets[etapa]||30) + jitter); return d;
 }
 
 function estaNoHojeReal(c) {
-  const etapaEsp = calcEtapaEsperada(c.dataInicio, c.dataFim);
+  const etapaEsp = calcEtapaEsperada(c.dataInicio, c.dataFim, c.gnp || c.id);
   if (c.etapa !== etapaEsp) return false;
-  const dc = dataCiclo(c.dataInicio, c.dataFim, c.etapa);
+  const dc = dataCiclo(c.dataInicio, c.dataFim, c.etapa, c.gnp || c.id);
   const diffDias = Math.floor((hoje - dc) / 864e5);
   const janela = c.etapa >= 8 ? 1 : 2;
   return diffDias >= 0 && diffDias <= janela;
@@ -406,7 +422,7 @@ function diasSemConclusao(c) {
 }
 
 function ciclosAtraso(c) {
-  const etapaEsp = calcEtapaEsperada(c.dataInicio, c.dataFim);
+  const etapaEsp = calcEtapaEsperada(c.dataInicio, c.dataFim, c.gnp || c.id);
   return Math.max(0, etapaEsp - c.etapa);
 }
 
@@ -432,7 +448,7 @@ async function carregarClientes() {
       .filter(c => !NAO_RENOVA.has(c.id))
       .map(c => ({
         ...c,
-        etapa: c.etapaAtual || calcEtapaEsperada(c.dataInicio, c.dataFim),
+        etapa: c.etapaAtual || calcEtapaEsperada(c.dataInicio, c.dataFim, c.gnp || c.id),
         checks: progressoLocal[c.id]?.checks || {},
         nok:    progressoLocal[c.id]?.nok    || [],
         concluida: false, concluidaHoje: false,
