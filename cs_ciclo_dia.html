@@ -635,7 +635,21 @@ function concluirEtapa(id){
   const et=ETAPAS[c.etapa];
   const feitos=Object.values(c.checks).filter(Boolean).length;
   if(feitos<et.itens.length&&!confirm(`Ainda há ${et.itens.length-feitos} item(ns) não marcados.\nDeseja concluir mesmo assim?`))return;
-  const novaEtapa=c.etapa<9?c.etapa+1:c.etapa;
+
+  let novaEtapa=c.etapa<9?c.etapa+1:c.etapa;
+
+  // Trava: etapa 6 (Início de renovação) só libera a partir de 120 dias
+  // antes do fim do contrato. Se tentar avançar antes da hora, o ciclo
+  // volta a girar automaticamente entre as etapas 3, 4 e 5 (nunca volta
+  // pra 1 ou 2) — sem interromper o fluxo da consultora.
+  if (c.etapa === 5 && novaEtapa === 6) {
+    const diasFim = diasParaFimContrato(c);
+    const dentroDaJanela = diasFim !== null && diasFim <= 120;
+    if (!dentroDaJanela) {
+      novaEtapa = 3;
+    }
+  }
+
   logAction(c,'CONCLUIU',`Etapa ${c.etapa}: ${et.nome}`,novaEtapa);
   if(c.etapa<9){c.etapa=novaEtapa;c.checks={};}
   else c.concluida=true;
