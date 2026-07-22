@@ -591,7 +591,16 @@ function renderLista() {
     }
 
     let cardClass=`cliente-card ${atrasado?'atrasado':c.concluidaHoje?'concluido-hoje':'ep-'+ep}${c.concluida?' concluido':''}`;
-    const statusBadge=atrasado?`<span class="badge-atr">⚠ Em atraso</span>`:c.concluidaHoje?`<span class="badge-ok">✓ Concluído hoje</span>`:noHoje?`<span class="badge-hoje">● Ciclo hoje</span>`:'';
+    let statusBadge = '';
+    if (c.concluidaHoje) {
+      statusBadge = `<span class="badge-ok">✓ Concluído hoje</span>`;
+    } else {
+      // Mostra os dois: um cliente pode estar no ciclo de hoje E carregar
+      // atraso de dias anteriores ao mesmo tempo — antes, o atraso escondia
+      // o badge de "ciclo hoje", dando a impressão de que ele tinha sumido.
+      if (noHoje) statusBadge += `<span class="badge-hoje">● Ciclo hoje</span>`;
+      if (atrasado) statusBadge += `<span class="badge-atr">⚠ Em atraso</span>`;
+    }
     const nokBadge=c.nok.length&&!c.concluidaHoje?`<span class="badge-nok">Pendência</span>`:'';
 
     return `
