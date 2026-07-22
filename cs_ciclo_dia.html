@@ -296,7 +296,18 @@ const SEQ_INICIO = [1,2,3,4,5,2,3,4];
 
 // ─── ESTADO ──────────────────────────────────────────────────────────────────
 const hoje = new Date();
-const HOJE_STR = hoje.toISOString().split('T')[0];
+// IMPORTANTE: usar data LOCAL, não UTC. hoje.toISOString() converte pro fuso
+// UTC, que faz o "dia virar" 3h antes da meia-noite real de Brasília — isso
+// causava clientes de hoje sendo tratados como "atraso de dia passado" à
+// noite. formatarDataLocal usa os componentes locais (getFullYear/getMonth/
+// getDate), que respeitam o fuso horário do navegador (Brasília).
+function formatarDataLocal(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dia}`;
+}
+const HOJE_STR = formatarDataLocal(hoje);
 const DATA_INICIO_SISTEMA = '2026-06-26';
 let CLIENTES = [];
 let REGISTROS = {}; // { clienteId: ["2026-06-26", ...] } — datas com CONCLUIU
@@ -726,8 +737,8 @@ async function logAction(c,acao,detalhe,novaEtapa){
 
 // ─── DEMO ────────────────────────────────────────────────────────────────────
 function dadosDemo(){
-  function d(n){const x=new Date(hoje);x.setDate(x.getDate()+n);return x.toISOString().split('T')[0];}
-  function di(n){const x=new Date(hoje);x.setDate(x.getDate()-n);return x.toISOString().split('T')[0];}
+  function d(n){const x=new Date(hoje);x.setDate(x.getDate()+n);return formatarDataLocal(x);}
+  function di(n){const x=new Date(hoje);x.setDate(x.getDate()-n);return formatarDataLocal(x);}
   return [
     {id:1,rowIndex:2,gnp:'001',nome:'Prefeitura de Maringá',consultora:'taina',dataInicio:di(1),dataFim:d(364),checks:{},nok:[],concluida:false,concluidaHoje:false,etapa:1},
     {id:2,rowIndex:3,gnp:'002',nome:'Câmara Municipal Londrina',consultora:'taina',dataInicio:di(31),dataFim:d(334),checks:{},nok:[],concluida:false,concluidaHoje:false,etapa:2},
