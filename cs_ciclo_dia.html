@@ -308,7 +308,16 @@ function formatarDataLocal(d) {
   return `${y}-${m}-${dia}`;
 }
 const HOJE_STR = formatarDataLocal(hoje);
-const DATA_INICIO_SISTEMA = '2026-06-26';
+const DATA_INICIO_SISTEMA = '2026-08-17';
+
+// IMPORTANTE: "hoje" (acima) mantém a hora real, usada só pra exibição
+// (saudação "bom dia/boa tarde", data no cabeçalho). Pra QUALQUER conta de
+// dias (diferença entre datas, janelas de ciclo), usamos hojeCalc, que é
+// fixado em meio-dia — igual ao backend. Sem isso, o mesmo cálculo podia dar
+// resultado diferente se rodado de manhã ou à tarde no mesmo dia civil.
+const hojeCalc = new Date(hoje);
+hojeCalc.setHours(12, 0, 0, 0);
+
 let CLIENTES = [];
 let REGISTROS = {}; // { clienteId: ["2026-06-26", ...] } — datas com CONCLUIU
 let HISTORICO = {}; // { "2026-06-26": [clienteId, ...] } — histórico do ciclo
@@ -341,7 +350,7 @@ function calcEtapaEsperada(dataInicio, dataFim, gnp) {
   const dIni = new Date(dataInicio + 'T12:00:00');
   const dFim = dataFim ? new Date(dataFim + 'T12:00:00') : null;
   const jitter = hashOffsetDias(gnp, 5);
-  const diasParaFim = dFim ? Math.floor((dFim - hoje) / 864e5) : 9999;
+  const diasParaFim = dFim ? Math.floor((dFim - hojeCalc) / 864e5) : 9999;
 
   if (dFim) {
     if (diasParaFim <= 15 - jitter)  return 9;
@@ -351,7 +360,7 @@ function calcEtapaEsperada(dataInicio, dataFim, gnp) {
     if (diasParaFim <= 120 - jitter) return 6;
   }
 
-  const diasDeInicio = Math.floor((hoje - dIni) / 864e5) - jitter;
+  const diasDeInicio = Math.floor((hojeCalc - dIni) / 864e5) - jitter;
   if (diasDeInicio < 0) return 1;
   return SEQ_INICIO[Math.min(7, Math.floor(diasDeInicio/30))];
 }
@@ -378,7 +387,7 @@ function estaNoHojeReal(c) {
   const etapaEsp = calcEtapaEsperada(c.dataInicio, c.dataFim, c.gnp || c.id);
   if (c.etapa !== etapaEsp) return false;
   const dc = dataCiclo(c.dataInicio, c.dataFim, c.etapa, c.gnp || c.id);
-  const diffDias = Math.floor((hoje - dc) / 864e5);
+  const diffDias = Math.floor((hojeCalc - dc) / 864e5);
   const janela = c.etapa >= 8 ? 1 : 2;
   return diffDias >= 0 && diffDias <= janela;
 }
@@ -439,7 +448,7 @@ function ciclosAtraso(c) {
 
 function diasParaFimContrato(c) {
   if (!c.dataFim) return null;
-  return Math.floor((new Date(c.dataFim+'T12:00:00') - hoje) / 864e5);
+  return Math.floor((new Date(c.dataFim+'T12:00:00') - hojeCalc) / 864e5);
 }
 
 // ─── CARREGAR ────────────────────────────────────────────────────────────────
