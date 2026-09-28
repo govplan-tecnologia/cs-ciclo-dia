@@ -912,26 +912,33 @@ carregarClientes();
     return dm(iso(a))+' a '+dm(iso(b));
   }
   function graficoSemana(j){
-    var W=480,H=200,p={l:30,r:10,t:20,b:34}, ds=j.dias;
-    var mx=Math.max(1,Math.ceil(Math.max.apply(null,ds.map(function(x){return x.media||0;}))));
-    var bw=(W-p.l-p.r)/ds.length, ah=H-p.t-p.b;
-    var grid=[0,mx/2,mx].map(function(v){var yy=H-p.b-ah*v/mx;return '<line x1="'+p.l+'" x2="'+(W-p.r)+'" y1="'+yy+'" y2="'+yy+'" stroke="#E2E8F0"/><text x="'+(p.l-6)+'" y="'+(yy+4)+'" font-size="10" text-anchor="end" fill="#94A3B8">'+num(v)+'</text>';}).join('');
-    var bars=ds.map(function(x,i){
-      var cx=p.l+i*bw+bw/2, h=x.media==null?0:ah*x.media/mx, top=H-p.b-h;
-      var cor=x.media==null?'#CBD5E1':x.media===0?'#15803D':x.media<=2?'#65A30D':x.media<=5?'#B45309':'#B91C1C';
-      return (h?'<rect x="'+(cx-bw*0.3)+'" y="'+top+'" width="'+(bw*0.6)+'" height="'+h+'" rx="3" fill="'+cor+'"><title>'+dm(x.data)+': média de '+num(x.media)+' dia(s) útil(eis) · '+x.concluidos+' concluído(s), '+x.abertos+' aberto(s)</title></rect>':'')
-        + '<text x="'+cx+'" y="'+(top-4)+'" font-size="11" font-weight="600" text-anchor="middle" fill="#1B2F5E">'+(x.media==null?'—':num(x.media))+'</text>'
-        + '<text x="'+cx+'" y="'+(H-16)+'" font-size="10" text-anchor="middle" fill="#94A3B8">'+NDIA[i]+'</text>'
-        + '<text x="'+cx+'" y="'+(H-4)+'" font-size="10" text-anchor="middle" fill="#94A3B8">'+dm(x.data)+'</text>';
-    }).join('');
-    return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Média de dias úteis para concluir, por dia">'+grid+bars+'</svg>'
-      + '<div class="gs-leg"><span>Média de dias úteis para concluir (0 = no mesmo dia)</span></div>';
+    var W=480,H=210,p={l:30,r:14,t:16,b:36}, ds=j.dias, n=ds.length;
+    function val(x,k){return (x.futuro||x.antesInicio)?null:x[k];}
+    var mx=Math.max(4,Math.ceil(Math.max.apply(null,ds.map(function(x){return Math.max(val(x,'ciclos')||0,val(x,'concluidos')||0);}))/4)*4);
+    var ah=H-p.t-p.b, aw=W-p.l-p.r;
+    function X(i){return p.l+aw*(i+0.5)/n;}
+    function Y(v){return p.t+ah*(1-v/mx);}
+    var grid=[0,1,2,3,4].map(function(k){var v=mx*k/4;return '<line x1="'+p.l+'" x2="'+(W-p.r)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="#E2E8F0"/><text x="'+(p.l-6)+'" y="'+(Y(v)+4)+'" font-size="10" text-anchor="end" fill="#94A3B8">'+num(v)+'</text>';}).join('');
+    function linha(k,cor,acima){
+      var d='',ant=false,pts='';
+      ds.forEach(function(x,i){
+        var v=val(x,k);
+        if(v==null){ant=false;return;}
+        d+=(ant?'L':'M')+X(i)+' '+Y(v)+' '; ant=true;
+        pts+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="3.5" fill="'+cor+'"><title>'+dm(x.data)+': '+v+'</title></circle>'
+          +'<text x="'+X(i)+'" y="'+(Y(v)+(acima?-9:16))+'" font-size="11" font-weight="600" text-anchor="middle" fill="'+cor+'">'+v+'</text>';
+      });
+      return (d?'<path d="'+d+'" fill="none" stroke="'+cor+'" stroke-width="2.5" stroke-linejoin="round"/>':'')+pts;
+    }
+    var lab=ds.map(function(x,i){return '<text x="'+X(i)+'" y="'+(H-18)+'" font-size="10" text-anchor="middle" fill="#94A3B8">'+NDIA[i]+'</text><text x="'+X(i)+'" y="'+(H-6)+'" font-size="10" text-anchor="middle" fill="#94A3B8">'+dm(x.data)+'</text>';}).join('');
+    return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Total de clientes no ciclo e concluídos, por dia">'+grid+lab+linha('ciclos','#1B2F5E',true)+linha('concluidos','#15803D',false)+'</svg>'
+      + '<div class="gs-leg"><span><i style="background:#1B2F5E"></i>Clientes no ciclo</span><span><i style="background:#15803D"></i>Concluídos</span></div>';
   }
   function tabelaSemana(j){
-    return '<div class="gs-wrap" style="margin-top:10px"><table><tr><th>Dia</th><th class="n">Ciclos</th><th class="n">No mesmo dia</th><th class="n">Abertos</th></tr>'
+    return '<div class="gs-wrap" style="margin-top:10px"><table><tr><th>Dia</th><th class="n">Ciclos</th><th class="n">Concluídos</th><th class="n">No mesmo dia</th><th class="n">Abertos</th><th class="n">Média (dias úteis)</th></tr>'
       + j.dias.map(function(x,i){
-        var vazio=x.futuro||x.antesInicio;
-        return '<tr><td>'+NDIA[i]+' '+dm(x.data)+'</td><td class="n">'+(vazio?'—':x.ciclos)+'</td><td class="n">'+(vazio?'—':x.noMesmoDia)+'</td><td class="n">'+(vazio?'—':x.abertos)+'</td></tr>';
+        var v=x.futuro||x.antesInicio, t=function(k){return v?'—':x[k];};
+        return '<tr><td>'+NDIA[i]+' '+dm(x.data)+'</td><td class="n">'+t('ciclos')+'</td><td class="n">'+t('concluidos')+'</td><td class="n">'+t('noMesmoDia')+'</td><td class="n">'+t('abertos')+'</td><td class="n">'+(v?'—':num(x.media))+'</td></tr>';
       }).join('')+'</table></div>';
   }
   function carregarSemana(seg){
@@ -968,7 +975,7 @@ carregarClientes();
     var sems = semanas();
     if (!semSel || sems.indexOf(semSel) < 0) semSel = sems[1] || sems[0];
     h += '<h2>Tendência semanal</h2>'
-      + '<div class="gs-grid2"><div class="gs-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><b>Dias para concluir, por dia</b>'
+      + '<div class="gs-grid2"><div class="gs-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><b>Clientes no ciclo e concluídos, por dia</b>'
       + '<select id="gs-sem-sel" class="gs-btn">'+sems.map(function(s){return '<option value="'+s+'"'+(s===semSel?' selected':'')+'>'+rotuloSemana(s)+'</option>';}).join('')+'</select></div>'
       + '<div id="gs-sem"></div></div>'
       + '<div class="gs-card"><b>Quanto tempo levam para concluir</b>'+faixas(d.faixas)+'</div></div>';
