@@ -781,5 +781,218 @@ function dadosDemo(){
 
 carregarClientes();
 </script>
+<!-- ═══ ABA 10 · GESTÃO ═══ Bloco acrescentado. Não altera nada do ciclo.
+     Para remover a aba, basta apagar este bloco inteiro (do <script> ao </script>). -->
+<script>
+(function () {
+  function iniciar() {
+  // ── estilo (usa as mesmas cores do ciclo) ──
+  var css = `
+  #gs-view{max-width:960px;margin:0 auto;padding:20px 28px}
+  #gs-view h2{font-size:15px;font-weight:700;margin:28px 0 4px;color:var(--navy)}
+  .gs-sub{color:var(--text2);font-size:12.5px;margin:0 0 12px;max-width:70ch}
+  .gs-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text2);margin-bottom:14px}
+  .gs-btn{font-family:inherit;font-size:12px;font-weight:600;padding:6px 12px;border:1.5px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer}
+  .gs-btn:hover{background:var(--bg)}
+  .gs-card{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--sh)}
+  .gs-kpis,.gs-tri{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .gs-kpi b{display:block;font-size:26px;font-weight:700;line-height:1.1}
+  .gs-kpi span,.gs-tri span.l{color:var(--text2);font-size:12px}
+  .gs-tri b{display:block;font-size:20px}
+  .gs-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:800px){.gs-grid2{grid-template-columns:1fr}#gs-view{padding:12px}}
+  #gs-view table{width:100%;border-collapse:collapse}
+  #gs-view th,#gs-view td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);font-size:13px}
+  #gs-view th{font-size:12px;color:var(--text2);background:var(--bg)}
+  #gs-view .n{text-align:right}
+  .gs-wrap{overflow-x:auto}
+  .gs-bar{height:8px;background:#EEF0F4;border-radius:4px;overflow:hidden;min-width:70px}
+  .gs-bar i{display:block;height:100%}
+  .gs-row{display:grid;grid-template-columns:170px 1fr 54px;gap:10px;align-items:center;padding:5px 0;font-size:13px}
+  .gs-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11.5px;font-weight:600}
+  .gs-pill.r{background:var(--red-m);color:var(--red-d)}
+  .gs-pill.g{background:var(--green-l);color:var(--green-d)}
+  .gs-pill.y{background:var(--amber-m);color:var(--amber)}
+  .gs-leg{display:flex;gap:16px;font-size:12px;color:var(--text2);margin-top:6px}
+  .gs-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+  .gs-vazio,.gs-box{color:var(--text2);padding:24px 0;text-align:center}
+  .gs-login{max-width:340px;margin:40px auto;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:26px;box-shadow:var(--sh)}
+  .gs-login h3{color:var(--navy);margin-bottom:4px;font-size:17px}
+  .gs-login p{color:var(--text2);font-size:13px;margin-bottom:14px}
+  .gs-login input{width:100%;padding:10px 12px;border:1.5px solid var(--border2);border-radius:8px;font:inherit;margin-bottom:10px}
+  .gs-login button{width:100%;padding:10px;border:0;border-radius:8px;background:var(--navy);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+  .gs-err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px}
+  `;
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+
+  // ── área onde o painel aparece ──
+  var view = document.createElement('div');
+  view.id = 'gs-view'; view.style.display = 'none';
+  var rodape = document.querySelector('.app-footer');
+  if (rodape && rodape.parentNode) rodape.parentNode.insertBefore(view, rodape);
+  else document.body.appendChild(view);
+
+  // ── helpers ──
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function pct(v){return v==null?'—':v.toFixed(1).replace('.',',')+'%';}
+  function num(v){return v==null?'—':String(v).replace('.',',');}
+  function brl(v){return 'R$ '+Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:0});}
+  function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
+  function dm(d){return d?d.slice(8)+'/'+d.slice(5,7):'';}
+  function corPct(v){return v==null?'#CBD5E1':v<=10?'#15803D':v<=30?'#B45309':'#B91C1C';}
+  function bar(v,cor){return '<div class="gs-bar"><i style="width:'+Math.min(100,v||0)+'%;background:'+(cor||corPct(v))+'"></i></div>';}
+  function kpi(v,l,st){return '<div class="gs-card gs-kpi"><b style="'+st+'">'+v+'</b><span>'+l+'</span></div>';}
+  function nomeEtapa(n){return (typeof ETAPAS!=='undefined'&&ETAPAS[n])?ETAPAS[n].nome:'';}
+
+  // ── mostrar / esconder o ciclo ──
+  function ocultarCiclo(ocultar){
+    var d = ocultar ? 'none' : '';
+    var tb = document.querySelector('.toolbar'); if (tb) tb.style.display = d;
+    var mn = document.querySelector('.main'); if (mn) mn.style.display = d;
+    view.style.display = ocultar ? 'block' : 'none';
+  }
+
+  // ── login ──
+  function telaSenha(msg){
+    view.innerHTML = '<form class="gs-login" id="gs-f"><h3>Área de gestão</h3><p>Digite a senha para ver o painel.</p>'
+      + '<input type="password" id="gs-senha" placeholder="Senha" autocomplete="current-password" required>'
+      + '<button type="submit">Entrar</button><div class="gs-err" role="alert">'+esc(msg||'')+'</div></form>';
+    document.getElementById('gs-f').addEventListener('submit',function(ev){
+      ev.preventDefault(); carregar(document.getElementById('gs-senha').value,false);
+    });
+    document.getElementById('gs-senha').focus();
+  }
+
+  function carregar(senha, auto){
+    view.innerHTML = '<div class="gs-box">Carregando painel...</div>';
+    fetch(API_URL + '?tipo=dashboard&senha=' + encodeURIComponent(senha))
+      .then(function(r){return r.json();})
+      .then(function(j){
+        if (!j.ok) throw new Error(j.erro || 'Erro ao carregar');
+        if (!j.resumo) throw new Error('Este endereço do Apps Script ainda não tem o painel. Confira se a implantação foi atualizada.');
+        sessionStorage.setItem('gs_senha', senha);
+        render(j);
+      })
+      .catch(function(e){
+        sessionStorage.removeItem('gs_senha');
+        telaSenha(e.message);
+      });
+  }
+
+  window.abrirGestao = function(btn){
+    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    ocultarCiclo(true);
+    if (typeof API_URL === 'undefined' || !API_URL) {
+      view.innerHTML = '<div class="gs-box">Conecte primeiro o Apps Script (campo amarelo no topo) para abrir a gestão.</div>';
+      return;
+    }
+    var s = sessionStorage.getItem('gs_senha');
+    if (s) carregar(s, true); else telaSenha('');
+  };
+
+  // ── gráficos ──
+  function faixas(f){
+    var tot = f.noDia+f.d1_2+f.d3_5+f.d6mais+f.pendente || 1;
+    var it = [['No mesmo dia',f.noDia,'#15803D'],['1–2 dias úteis',f.d1_2,'#65A30D'],['3–5 dias úteis',f.d3_5,'#B45309'],['Mais de 5 dias úteis',f.d6mais,'#B91C1C'],['Ainda não concluídos',f.pendente,'#7F1D1D']];
+    return it.map(function(x){return '<div class="gs-row"><span>'+x[0]+'</span>'+bar(100*x[1]/tot,x[2])+'<span style="text-align:right">'+x[1]+'</span></div>';}).join('');
+  }
+  function tendencia(t){
+    if (t.length < 2) return '<div class="gs-vazio">Dados insuficientes para a tendência.</div>';
+    var W=480,H=200,p={l:34,r:10,t:10,b:26};
+    function x(i){return p.l+i*(W-p.l-p.r)/(t.length-1);}
+    function y(v){return p.t+(100-Math.min(100,v||0))*(H-p.t-p.b)/100;}
+    function linha(k,c){
+      return '<polyline fill="none" stroke="'+c+'" stroke-width="2.5" points="'+t.map(function(s,i){return x(i)+','+y(s[k]);}).join(' ')+'"/>'
+        + t.map(function(s,i){return '<circle cx="'+x(i)+'" cy="'+y(s[k])+'" r="3" fill="'+c+'"><title>'+dm(s.semana)+': '+pct(s[k])+' ('+s.total+' ciclos)</title></circle>';}).join('');
+    }
+    var grid = [0,25,50,75,100].map(function(v){return '<line x1="'+p.l+'" x2="'+(W-p.r)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="#E2E8F0"/><text x="'+(p.l-6)+'" y="'+(y(v)+4)+'" font-size="10" text-anchor="end" fill="#94A3B8">'+v+'%</text>';}).join('');
+    var lab = t.map(function(s,i){return '<text x="'+x(i)+'" y="'+(H-8)+'" font-size="10" text-anchor="middle" fill="#94A3B8">'+dm(s.semana)+'</text>';}).join('');
+    return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Tendência semanal">'+grid+lab+linha('pctNoDia','#15803D')+linha('pctAtraso','#B91C1C')+'</svg>'
+      + '<div class="gs-leg"><span><i style="background:#15803D"></i>No mesmo dia</span><span><i style="background:#B91C1C"></i>Em atraso</span></div>';
+  }
+
+  // ── painel ──
+  function render(d){
+    var r = d.resumo, h = '';
+    h += '<div class="gs-top"><div><b>Gestão</b> · dados de '+dm(d.periodo.inicio)+' a '+dm(d.periodo.fim)+' · atualizado '+esc(d.geradoEm)+'</div>'
+      + '<div><button class="gs-btn" id="gs-atu">Atualizar</button> <button class="gs-btn" id="gs-sair">Sair</button></div></div>';
+    h += '<div class="gs-kpis">'
+      + kpi(r.total,'Ciclos no período','')
+      + kpi(pct(r.pctNoDia),'Concluídos no mesmo dia','color:var(--green-d)')
+      + kpi(pct(r.pctAtraso),'Em atraso (tardios + abertos)','color:'+corPct(r.pctAtraso))
+      + kpi(num(r.medianaDU),'Mediana de dias úteis até concluir','')
+      + kpi(r.pendentes,'Atrasos ainda abertos','color:'+(r.pendentes?'var(--red)':'var(--green-d)'))
+      + '</div>';
+
+    h += '<h2>Por consultora</h2><p class="gs-sub">Percentual sobre os ciclos de cada uma, então quem tem mais clientes não sai prejudicada. "Ciclos/sem" é a carga média de ciclos por semana.</p>'
+      + '<div class="gs-card gs-wrap"><table><tr><th>Consultora</th><th class="n">Vigentes</th><th class="n">Ciclos/sem</th><th class="n">Ciclos</th><th>No mesmo dia</th><th>Em atraso</th><th class="n">Abertos</th><th class="n">Mediana (dias úteis)</th></tr>'
+      + d.consultoras.map(function(c){return '<tr><td><b>'+cap(c.nome)+'</b></td><td class="n">'+c.vigentes+'</td><td class="n">'+num(c.ciclosPorSemana)+'</td><td class="n">'+c.total+'</td><td>'+pct(c.pctNoDia)+bar(c.pctNoDia,'#15803D')+'</td><td>'+pct(c.pctAtraso)+bar(c.pctAtraso)+'</td><td class="n">'+c.pendentes+'</td><td class="n">'+num(c.medianaDU)+'</td></tr>';}).join('')
+      + '</table></div>';
+
+    h += '<h2>Tendência semanal</h2><p class="gs-sub">Semana em que o cliente entrou no ciclo. Linha vermelha em queda significa que a equipe está melhorando.</p>'
+      + '<div class="gs-grid2"><div class="gs-card">'+tendencia(d.tendencia)+'</div><div class="gs-card"><b>Quanto tempo levam para concluir</b>'+faixas(d.faixas)+'</div></div>';
+
+    h += '<h2>Atraso por etapa</h2><p class="gs-sub">Se uma etapa concentra atraso em todas as consultoras, o problema tende a ser o processo, não a pessoa.</p>'
+      + '<div class="gs-card">'+d.etapas.map(function(e){return '<div class="gs-row"><span>'+e.etapa+' · '+esc(e.nome)+'</span>'+bar(e.pctAtraso)+'<span style="text-align:right">'+pct(e.pctAtraso)+'</span></div>';}).join('')
+      + '<div class="gs-leg"><span>Barra = % dos ciclos da etapa que não foram concluídos no mesmo dia</span></div></div>';
+
+    h += '<h2>Idade dos atrasos em aberto</h2><p class="gs-sub">Separa quem atrasou ontem de quem está parado há semanas.</p>'
+      + '<div class="gs-grid2"><div class="gs-tri" style="grid-template-columns:1fr 1fr">'
+      + d.idade.buckets.map(function(b,i){return '<div class="gs-card"><b style="color:'+(i>1&&b.qtd?'var(--red)':'inherit')+'">'+b.qtd+'</b><span class="l">'+b.label+'</span></div>';}).join('')
+      + '</div><div class="gs-card gs-wrap">'
+      + (d.idade.lista.length ? '<table><tr><th>Cliente</th><th>Consultora</th><th>Etapa</th><th class="n">Dias úteis</th></tr>'+d.idade.lista.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td>'+cap(x.cons)+'</td><td>'+x.etapa+'</td><td class="n"><span class="gs-pill '+(x.idade>5?'r':'y')+'">'+x.idade+'</span></td></tr>';}).join('')+'</table>' : '<div class="gs-vazio">Nenhum atraso em aberto.</div>')
+      + '</div></div>';
+
+    h += '<h2>Clientes recorrentemente atrasados</h2><p class="gs-sub">Clientes com 2 ou mais ciclos atrasados. Podem precisar de uma abordagem diferente.</p><div class="gs-card gs-wrap">'
+      + (d.recorrentes.length ? '<table><tr><th>Cliente</th><th>Consultora</th><th>Etapas</th><th class="n">Ciclos atrasados</th><th class="n">Abertos</th></tr>'+d.recorrentes.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td>'+cap(x.cons)+'</td><td>'+x.etapas.sort().join(', ')+'</td><td class="n">'+x.qtd+'</td><td class="n">'+x.pendentes+'</td></tr>';}).join('')+'</table>' : '<div class="gs-vazio">Nenhum cliente recorrente.</div>')
+      + '</div>';
+
+    var rk = d.risco;
+    h += '<h2>Renovações em risco</h2><p class="gs-sub">Contratos que vencem em até 120 dias com a etapa atrás do esperado (ou já vencidos e ainda vigentes). Total em risco: <b>'+rk.totalRisco+' cliente(s) · '+brl(rk.valorRisco)+'</b>.</p>'
+      + '<div class="gs-tri">'+rk.buckets.map(function(b){return '<div class="gs-card"><b>'+b.qtd+'</b><span class="l">'+b.label+' · '+brl(b.valor)+'</span><div style="margin-top:6px">'+(b.emRisco?'<span class="gs-pill r">'+b.emRisco+' em risco · '+brl(b.valorRisco)+'</span>':'<span class="gs-pill g">Tudo em dia</span>')+'</div></div>';}).join('')+'</div>'
+      + '<div class="gs-card gs-wrap" style="margin-top:12px">'
+      + (rk.lista.length ? '<table><tr><th>Cliente</th><th>Consultora</th><th>Vencimento</th><th>Etapa atual</th><th>Deveria estar</th><th class="n">Valor</th></tr>'+rk.lista.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td>'+cap(x.cons)+'</td><td>'+dm(x.dataFim)+' <span class="gs-pill '+(x.dias<0?'r':x.dias<=30?'y':'g')+'">'+(x.dias<0?'vencido':x.dias+' dias')+'</span></td><td>'+x.etapaAtual+' · '+esc(nomeEtapa(x.etapaAtual))+'</td><td>'+x.etapaEsperada+' · '+esc(nomeEtapa(x.etapaEsperada))+'</td><td class="n">'+brl(x.valor)+'</td></tr>';}).join('')+'</table>' : '<div class="gs-vazio">Nenhuma renovação em risco.</div>')
+      + '</div>';
+
+    var rn = d.renovacao;
+    h += '<h2>Taxa de renovação</h2><p class="gs-sub">Clientes distintos com etapa 9 concluída contra clientes marcados como "não renova", desde o início do sistema.</p>'
+      + '<div class="gs-tri"><div class="gs-card"><b style="color:var(--green-d)">'+pct(rn.taxa)+'</b><span class="l">Taxa de renovação</span></div><div class="gs-card"><b>'+rn.renovados+'</b><span class="l">Renovaram</span></div><div class="gs-card"><b style="color:'+(rn.naoRenovam?'var(--red)':'inherit')+'">'+rn.naoRenovam+'</b><span class="l">Não renovam</span></div></div>'
+      + (rn.lista.length ? '<div class="gs-card gs-wrap" style="margin-top:12px"><table><tr><th>Cliente</th><th>Consultora</th><th>Data</th><th>Motivo registrado</th></tr>'+rn.lista.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td>'+cap(x.cons)+'</td><td>'+dm(x.dia)+'</td><td>'+esc(x.det)+'</td></tr>';}).join('')+'</table></div>' : '');
+
+    h += '<h2>Qualidade dos registros</h2><p class="gs-sub">Informativo. "Repetidas" são conclusões clicadas mais de uma vez para o mesmo cliente e etapa no mesmo dia. "Em bloco" são etapas diferentes do mesmo cliente concluídas com menos de 10 minutos de intervalo.</p>'
+      + '<div class="gs-card gs-wrap"><table><tr><th>Consultora</th><th class="n">Conclusões</th><th class="n">Repetidas</th><th class="n">Em bloco</th></tr>'
+      + d.qualidade.map(function(q){return '<tr><td><b>'+cap(q.nome)+'</b></td><td class="n">'+q.conclusoes+'</td><td class="n">'+q.repetidas+'</td><td class="n">'+q.emBloco+'</td></tr>';}).join('')
+      + '</table></div>';
+
+    view.innerHTML = h;
+    document.getElementById('gs-atu').onclick = function(){carregar(sessionStorage.getItem('gs_senha')||'',true);};
+    document.getElementById('gs-sair').onclick = function(){sessionStorage.removeItem('gs_senha');telaSenha('');};
+  }
+
+  // ── encaixe na barra de abas (sem mexer no código do ciclo) ──
+  function addTab(){
+    var tabs = document.getElementById('etapas-tabs');
+    if (!tabs || tabs.querySelector('[data-gs]')) return;
+    var b = document.createElement('button');
+    b.className = 'tab-btn'; b.setAttribute('data-gs','1'); b.textContent = '10 · Gestão';
+    b.onclick = function(){window.abrirGestao(b);};
+    tabs.appendChild(b);
+  }
+  if (typeof montarTabs === 'function') {
+    var _mt = montarTabs;
+    montarTabs = function(){ _mt(); ocultarCiclo(false); addTab(); };
+  }
+  if (typeof filtrarEtapa === 'function') {
+    var _fe = filtrarEtapa;
+    filtrarEtapa = function(e,b){ ocultarCiclo(false); _fe(e,b); };
+  }
+  addTab();
+  }
+  // espera a página terminar de carregar, então funciona em qualquer ponto do arquivo
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
+  else iniciar();
+})();
+</script>
 </body>
 </html>
