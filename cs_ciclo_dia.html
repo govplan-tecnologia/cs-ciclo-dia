@@ -953,10 +953,40 @@ carregarClientes();
     box.innerHTML=graficoSemana(j)+tabelaSemana(j);
   }
 
+  // ── consulta por cliente ──
+  var CLI = [];
+  function sem(s){return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+  function fmtDia(ds){var d=new Date(ds+'T12:00:00');return dm(ds)+' ('+['dom','seg','ter','qua','qui','sex','sáb'][d.getDay()]+')';}
+  function situacao(c){
+    if (c.fim) return c.acao==='NAO_CONCLUIU'
+      ? '<span class="gs-pill y">Não concluído em '+dm(c.fim)+'</span>'
+      : '<span class="gs-pill g">Concluído em '+dm(c.fim)+'</span>';
+    return c.dias[c.dias.length-1]>=iso(new Date())
+      ? '<span class="gs-pill y">Em andamento</span>'
+      : '<span class="gs-pill r">Sem conclusão</span>';
+  }
+  function buscarClientes(q){
+    var box=document.getElementById('gs-busca-res'); if(!box) return;
+    q=sem(q).trim();
+    if(q.length<2){box.innerHTML='<div class="gs-vazio">Digite ao menos 2 caracteres do GNP ou do nome do órgão.</div>';return;}
+    var r=CLI.filter(function(c){return sem(c.id).indexOf(q)>=0||sem(c.nome).indexOf(q)>=0;});
+    if(!r.length){box.innerHTML='<div class="gs-vazio">Nenhum cliente encontrado.</div>';return;}
+    var mais=r.length>10; r=r.slice(0,10);
+    box.innerHTML=r.map(function(c){
+      var gnp=String(c.id).indexOf('SEMGNP_')===0?'':' <span class="gs-pill y">GNP '+esc(c.id)+'</span>';
+      return '<div style="margin-bottom:18px"><div style="font-weight:700;margin-bottom:6px">'+esc(c.nome)+gnp+' · '+cap(c.cons)+'</div>'
+        + '<div class="gs-wrap"><table><tr><th>Etapa</th><th>Dias em que apareceu no ciclo</th><th>Situação</th></tr>'
+        + c.ciclos.map(function(x){return '<tr><td>'+x.etapa+' · '+esc(ETAPAS_GS[x.etapa]||'')+'</td><td>'+x.dias.map(fmtDia).join(', ')+'</td><td>'+situacao(x)+'</td></tr>';}).join('')
+        + '</table></div></div>';
+    }).join('') + (mais?'<div class="gs-sub">Mostrando os 10 primeiros. Refine a busca para ver os demais.</div>':'');
+  }
+  var ETAPAS_GS={1:'Boas-vindas',2:'Verificação de uso',3:'Acompanhamento CS',4:'Frequência de uso',5:'Nível de satisfação',6:'Início de renovação',7:'Acomp. de renovação',8:'Previsão de empenho',9:'Renovação'};
+
   // ── painel ──
   function render(d){
     var r = d.resumo, h = '';
     DIARIO = d.diario || [];
+    CLI = d.clientesHist || [];
     h += '<div class="gs-top"><div><b>Gestão</b> · dados de '+dm(d.periodo.inicio)+' a '+dm(d.periodo.fim)+' · atualizado '+esc(d.geradoEm)+'</div>'
       + '<div><button class="gs-btn" id="gs-atu">Atualizar</button> <button class="gs-btn" id="gs-sair">Sair</button></div></div>';
     h += '<div class="gs-kpis">'
@@ -1000,11 +1030,16 @@ carregarClientes();
       + (rn.lista.length ? '<table><tr><th>Cliente</th><th>Consultora</th><th>Data</th><th>Motivo registrado</th></tr>'+rn.lista.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td>'+cap(x.cons)+'</td><td>'+dm(x.dia)+'</td><td>'+esc(x.det)+'</td></tr>';}).join('')+'</table>' : '<div class="gs-vazio">Nenhum cliente marcado como não renova.</div>')
       + '</div>';
 
+    h += '<h2>Consulta por cliente</h2><p class="gs-sub">Busque pelo GNP ou pelo nome do órgão para ver em quais dias o cliente apareceu no ciclo.</p>'
+      + '<div class="gs-card"><input id="gs-busca" type="search" placeholder="Digite o GNP ou o nome do órgão..." autocomplete="off" style="width:100%;padding:10px 12px;border:1.5px solid var(--border2);border-radius:8px;font:inherit;background:var(--surface);color:var(--text)">'
+      + '<div id="gs-busca-res" style="margin-top:12px"></div></div>';
+
     view.innerHTML = h;
     document.getElementById('gs-atu').onclick = function(){carregar(sessionStorage.getItem('gs_senha')||'',true);};
     document.getElementById('gs-sair').onclick = function(){sessionStorage.removeItem('gs_senha');telaSenha('');};
     document.getElementById('gs-sem-sel').onchange = function(){semSel=this.value;carregarSemana(semSel);};
     carregarSemana(semSel);
+    var bq=document.getElementById('gs-busca'); bq.oninput=function(){buscarClientes(this.value);}; buscarClientes('');
   }
 
   // ── encaixe na barra de abas (sem mexer no código do ciclo) ──
